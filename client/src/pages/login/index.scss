@@ -1,0 +1,30 @@
+.login-container {
+    width: 100%;
+    position: absolute;
+    top: 50%;
+    text-align: center;
+    -ms-transform: translateY(-50%);
+    transform: translateY(-50%);
+    .tf-username, .tf-password {
+        margin: 30px auto;
+        display: block;
+        width: 400px;
+        .MuiOutlinedInput-root {
+            width: 400px;
+        }
+    }
+    .sp-register-hyperlink {
+        color: #1b70bc;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+    .bt-login {
+        display: block;
+        margin: 40px auto;
+        width: 200px;
+    }
+    .img-logo {
+        margin-bottom: 10px;
+        // width: 200px;
+    }
+}
