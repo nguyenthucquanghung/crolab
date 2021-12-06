@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.db.models.deletion import DO_NOTHING
-from enumerates import *
+from .enumerates import *
 
 
 class User(AbstractUser):
@@ -70,8 +70,24 @@ class Job(models.Model):
     class Meta:
         db_table = 'job'
 
+    def to_dict(self):
+        return {
+            'category': self.category,
+            'name': self.name,
+            'description': self.description,
+            'unit_qty': self.unit_qty,
+            'truth_qty': self.truth_qty,
+            'shared_qty': self.shared_qty,
+            'min_qty': self.min_qty,
+            'accepted_qty': self.accepted_qty,
+            'unit_wage': self.unit_wage,
+            'unit_bonus': self.unit_bonus,
+            'accepted_threshold': self.accept_threshold,
+            'bonus_threshold': self.bonus_threshold
+        }
 
-class Comment:
+
+class Comment(models.Model):
     user = models.ForeignKey(User, on_delete=models.DO_NOTHING)
     job = models.ForeignKey(Job, on_delete=DO_NOTHING)
     content = models.CharField(max_length=1000)
@@ -80,7 +96,7 @@ class Comment:
         db_table = 'comment'
 
 
-class ClassificationLabelType:
+class ClassificationLabelType(models.Model):
     job = models.ForeignKey(Job, on_delete=DO_NOTHING)
     name = models.CharField(max_length=100, unique=True)
     description = models.CharField(max_length=1000)
@@ -89,7 +105,7 @@ class ClassificationLabelType:
         db_table = 'classification'
 
 
-class Task:
+class Task(models.Model):
     job = models.ForeignKey(Job, on_delete=models.DO_NOTHING)
     annotator = models.ForeignKey(User, on_delete=models.DO_NOTHING)
     unit_qty = models.IntegerField()
@@ -105,9 +121,9 @@ class Task:
         db_table = 'task'
 
 
-class Unit:
+class Unit(models.Model):
     job = models.ForeignKey(Job, on_delete=DO_NOTHING)
-    task = models.ForeignKey(Task, DO_NOTHING)
+    task = models.ForeignKey(Task, on_delete=DO_NOTHING)
     data = models.CharField(max_length=1000)
     label = models.CharField(max_length=1000)
     assigned = models.BooleanField(default=False)
@@ -116,7 +132,7 @@ class Unit:
         db_table = 'unit'
 
 
-class TruthUnit:
+class TruthUnit(models.Model):
     job = models.ForeignKey(Job, on_delete=DO_NOTHING)
     data = models.CharField(max_length=1000)
     label = models.CharField(max_length=1000)
@@ -125,7 +141,7 @@ class TruthUnit:
         db_table = 'truth_unit'
 
 
-class TruthLabel:
+class TruthLabel(models.Model):
     truth_unit = models.ForeignKey(TruthUnit, on_delete=DO_NOTHING)
     task = models.ForeignKey(Task, on_delete=DO_NOTHING)
     label = models.CharField(max_length=1000)
@@ -136,7 +152,7 @@ class TruthLabel:
         db_table = 'truth_label'
 
 
-class SharedUnit:
+class SharedUnit(models.Model):
     job = models.ForeignKey(Job, on_delete=DO_NOTHING)
     data = models.CharField(max_length=1000)
     mean_value = models.CharField(max_length=1000)
@@ -145,7 +161,7 @@ class SharedUnit:
         db_table = 'shared_unit'
 
 
-class SharedLabel:
+class SharedLabel(models.Model):
     shared_unit = models.ForeignKey(SharedUnit, on_delete=DO_NOTHING)
     task = models.ForeignKey(Task, on_delete=DO_NOTHING)
     label = models.CharField(max_length=1000)
@@ -156,7 +172,7 @@ class SharedLabel:
         db_table = 'shared_label'
 
 
-class Rank:
+class Rank(models.Model):
     user = models.ForeignKey(User, on_delete=DO_NOTHING)
     rank_category = models.SmallIntegerField(RankCategory.choices)
     offset = models.IntegerField()
@@ -165,10 +181,10 @@ class Rank:
         db_table = 'rank'
 
 
-class Rating:
+class Rating(models.Model):
     task = models.ForeignKey(Task, on_delete=DO_NOTHING)
-    rater = models.ForeignKey(User, on_delete=DO_NOTHING)
-    ratee = models.ForeignKey(User, on_delete=DO_NOTHING)
+    rater = models.ForeignKey(User, on_delete=DO_NOTHING, related_name='+')
+    ratee = models.ForeignKey(User, on_delete=DO_NOTHING, related_name='+')
     comment = models.CharField(max_length=1000)
     # By scale 0.01
     rating = models.IntegerField()

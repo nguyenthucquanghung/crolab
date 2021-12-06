@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class Gender(models.IntegerChoices):
     FEMALE = 0
     MALE = 1
