@@ -1,10 +1,11 @@
 from django.urls import path
 from django.urls.conf import include
-from .views import  UserRegisterView, UserLoginView
+from .views import  UserRegisterView, UserLoginView, JobViewSet
 from rest_framework import routers
 
 
 router = routers.DefaultRouter()
+router.register(r'job', JobViewSet)
 
 
 urlpatterns = [
