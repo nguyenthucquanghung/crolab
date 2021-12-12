@@ -59,22 +59,26 @@ class Job(models.Model):
     truth_qty = models.IntegerField()
     shared_qty = models.IntegerField()
     min_qty = models.IntegerField()
-    accepted_qty = models.IntegerField()
+    accepted_qty = models.IntegerField(default=0)
     unit_wage = models.IntegerField()
     unit_bonus = models.IntegerField()
     # In scale 0.01, Eg: accept_threshold=68 mean accept above 68% accuracy
     accept_threshold = models.IntegerField()
     # In scale 0.01, Eg: accept_threshold=68 mean accept above 68% accuracy
     bonus_threshold = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'job'
 
     def to_dict(self):
         return {
+            'id': self.id,
             'category': self.category,
             'name': self.name,
             'description': self.description,
+            'requester': self.requester.to_dict(),
             'unit_qty': self.unit_qty,
             'truth_qty': self.truth_qty,
             'shared_qty': self.shared_qty,
@@ -83,7 +87,9 @@ class Job(models.Model):
             'unit_wage': self.unit_wage,
             'unit_bonus': self.unit_bonus,
             'accepted_threshold': self.accept_threshold,
-            'bonus_threshold': self.bonus_threshold
+            'bonus_threshold': self.bonus_threshold,
+            'created_at': self.created_at,
+            'updated_at': self.updated_at
         }
 
 
@@ -91,9 +97,19 @@ class Comment(models.Model):
     user = models.ForeignKey(User, on_delete=models.DO_NOTHING)
     job = models.ForeignKey(Job, on_delete=DO_NOTHING)
     content = models.CharField(max_length=1000)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'comment'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user': self.user.to_dict(),
+            'job': self.job.id,
+            'content': self.content,
+            'created_at': self.created_at
+        }
 
 
 class ClassificationLabelType(models.Model):
@@ -104,6 +120,14 @@ class ClassificationLabelType(models.Model):
     class Meta:
         db_table = 'classification'
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'job': self.job.id,
+            'name': self.name,
+            'description': self.description
+        }
+
 
 class Task(models.Model):
     job = models.ForeignKey(Job, on_delete=models.DO_NOTHING)
@@ -113,12 +137,26 @@ class Task(models.Model):
     passed = models.BooleanField(default=False)
     rejected = models.BooleanField(default=False)
     # In scale 0.01
-    shared_accuracy = models.IntegerField()
+    shared_accuracy = models.IntegerField(default=0)
     # In scale 0.01
-    truth_accuracy = models.IntegerField()
+    truth_accuracy = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'task'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'annotator': self.annotator.to_dict(),
+            'unit_qty': self.unit_qty,
+            'accepted': self.accepted,
+            'passed': self.passed,
+            'rejected': self.rejected,
+            'shared_accuracy': self.shared_accuracy,
+            'truth_accuracy': self.truth_accuracy,
+            'created_at': self.created_at
+        }
 
 
 class Unit(models.Model):
