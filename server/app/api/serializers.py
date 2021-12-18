@@ -24,5 +24,19 @@ class JobSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Job
-        fields = ('category', 'name', 'description', 'unit_qty', 'truth_qty', 'shared_qty', 'min_qty', 'accepted_qty',
+        fields = ('category', 'name', 'description', 'unit_qty', 'truth_qty', 'shared_qty', 'min_qty',
                   'unit_wage', 'unit_bonus', 'accept_threshold', 'bonus_threshold')
+
+
+class CommentSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Comment
+        fields = ('content', 'job_id')
+
+
+class TaskSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Task
+        fields = ('unit_qty', 'job_id')
