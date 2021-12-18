@@ -44,7 +44,7 @@ export default class Header extends React.Component<{ inLoginScreen: boolean }, 
                         <img className={`img-home`} src='/crolab_logo.png' alt='crolab_logo' />
                     </div>
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1, display: { xs: 'none', sm: 'none', md: 'block' } }}>
-                        FIMO Labeling tool
+                        Crowdsourcing platform
                     </Typography>
                     <Typography component="div" sx={{ flexGrow: 1, display: { xs: 'block', sm: 'block', md: 'none' } }}>
                     </Typography>

@@ -18,7 +18,7 @@ COPY ./requirements.txt .
 RUN apk update
 RUN apk add --no-cache mariadb-connector-c-dev
 RUN apk update
-RUN apk add python3 python3-dev mariadb-dev build-base netcat-openbsd
+RUN apk add python3 python3-dev mariadb-dev build-base netcat-openbsd libffi-dev 
 RUN pip install -r requirements.txt 
 
 # V. Copy the whole project

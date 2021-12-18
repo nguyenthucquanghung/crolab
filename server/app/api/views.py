@@ -11,8 +11,14 @@ from django.db import models
 from .serializers import UserSerializer, UserLoginSerializer, JobSerializer
 from django.conf import settings
 from .utils import *
+import uuid
+from azure.storage.blob import BlockBlobService
+from azure.storage.blob.models import ContentSettings
 
-
+ACCOUNT_NAME = 'crolab'
+ACCOUNT_KEY = 'dZSWtRqd7Yq3RPtF4JHrVsx3OFwlS27xPaEOff23R1CjGlqdQ3gMozuNQ0ZqUMMJ/cjFLA5fCrh311n2ug6UdQ=='
+MEDIA_CONTAINER = 'media'
+STATIC_CONTAINER = 'static'
 # Create your views here.
 
 
@@ -85,8 +91,35 @@ class JobViewSet(viewsets.ModelViewSet):
     def create(self, request):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
+            try:
+                for _, audio_file in enumerate(request.FILES.getlist("audio_files")):
+                    filename = audio_file.name
+                    file_upload_name = str(uuid.uuid4()) + filename
+                    blob_service_client = BlockBlobService(
+                        account_name=ACCOUNT_NAME,
+                        account_key=ACCOUNT_KEY,
+                    )
+                    blob_service_client.create_blob_from_bytes(
+                        container_name=MEDIA_CONTAINER,
+                        blob_name=file_upload_name,
+                        blob=audio_file.read(),
+                        content_settings = ContentSettings(
+                            content_type='audio/wav', 
+                            content_disposition='inline'
+                        )
+                    )
+            except Exception as e:
+                return Response({
+                    'result': 503,
+                    'message': "Tải lên dữ liệu thất bại",
+                    'logs': str(e)
+                }, status.HTTP_503_SERVICE_UNAVAILABLE)
+
+
             user = User.objects.filter(email=request.user).first()
             job = serializer.save(requester=user)
+
+
             return Response(job.to_dict(), status.HTTP_201_CREATED)
         else:
             return Response({
@@ -96,7 +129,8 @@ class JobViewSet(viewsets.ModelViewSet):
     @auth
     def list(self, request):
         # TODO: order by created/updated time
-        query_set = self.queryset.filter(unit_qty__gt=models.F('accepted_qty')).order_by('unit_wage')
+        query_set = self.queryset.filter(
+            unit_qty__gt=models.F('accepted_qty')).order_by('unit_wage')
         paginator = self.paginate_queryset(query_set)
         result = []
         for job in paginator:

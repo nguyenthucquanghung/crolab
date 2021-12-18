@@ -1,22 +1,20 @@
 export enum SnackBarType {
     Success, Error, Warning, Info
 }
-export enum SearchType {
-    SearchByTitle,
-    SearchAllFields,
+
+export enum GenderType {
+    Female = 0,
+    Male = 1,
+    NonBinary = 2,
 }
 
-export enum Claim3Type {
-    None = -1,
-    MoreSpecific = 0,
-    Generalization = 1,
-    Negation = 2,
-    Paraphrasing = 3,
-    EntitySubstitution = 4,
+export enum UserRoleType {
+    Admin = 0,
+    Requester = 1,
+    Annotator = 2,
 }
 
-export enum LabelType {
-    Support,
-    Refute,
-    NotEnoughInfo,
+export enum CategoryType {
+    SpeechToText = 0,
+    DocumentClassification = 1,
 }
