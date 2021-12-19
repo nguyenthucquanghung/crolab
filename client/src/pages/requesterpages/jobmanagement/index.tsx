@@ -37,7 +37,7 @@ interface IDashboardState {
     jobList: any[];
 }
 
-export default class Dashboard extends React.Component<{}, IDashboardState> {
+export default class JobManagement extends React.Component<{}, IDashboardState> {
     public constructor(props: any) {
         super(props);
         this.state = {

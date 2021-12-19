@@ -23,7 +23,7 @@ import { SnackBarType } from "./utils/enumerates";
 import { ISnackBarState, SnackBarActions } from "./redux/snackbar/types";
 import { Dispatch } from "redux";
 import Utils from "./utils/utils";
-import Dashboard from "./pages/requesterpages/dashboard";
+import JobManagement from "./pages/requesterpages/jobmanagement";
 
 function mapDispatcherToProps(dispatch: Dispatch<SnackBarActions>): IAppPropsFromDispatch {
 	return {
@@ -75,8 +75,8 @@ class App extends React.Component<IAppProps> {
 					<Route exact path='/' component={Main} />
 					<Route exact path='/register' component={Register} />
 					<Route exact path='/login' component={Login} />
-					<Route exact path='/dashboard' component={Dashboard} />
-					<Route exact path='/createjob' component={Dashboard} />
+					<Route exact path='/requester/jobmanagement' component={JobManagement} />
+					<Route exact path='/requester/createjob' component={JobManagement} />
 				</Router>
 				<Modal
 					open={!!this.props.showTopLoading}

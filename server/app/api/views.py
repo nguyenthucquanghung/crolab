@@ -55,10 +55,12 @@ class UserLoginView(APIView):
             if user:
                 refresh = TokenObtainPairSerializer.get_token(user)
                 data = {
-                    'message': 'Login successfully!',
+                    'message': 'Đăng nhập thành công!',
                     'result': 201,
                     'email': str(user),
                     'user_id': int(user.id),
+                    'full_name': str(user.full_name),
+                    'role': int(user.role),
                     'refresh_token': str(refresh),
                     'access_token': str(refresh.access_token),
                     'access_expires': int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds()),
@@ -112,7 +114,7 @@ class JobViewSet(viewsets.ModelViewSet):
             except Exception as e:
                 return Response({
                     'result': 503,
-                    'message': "T?i l�n d? li?u th?t b?i",
+                    'message': "Tải lên dữ liệu thất bại",
                     'logs': str(e)
                 }, status.HTTP_503_SERVICE_UNAVAILABLE)
 
