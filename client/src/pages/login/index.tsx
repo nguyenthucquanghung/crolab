@@ -6,7 +6,7 @@ import * as generalActions from "../../redux/general/actions";
 import * as snackBarActions from "../../redux/snackbar/actions";
 import { connect } from "react-redux";
 import userAPI from "../../api/userAPI";
-import { SnackBarType } from "../../utils/enumerates";
+import { SnackBarType, UserRoleType } from "../../utils/enumerates";
 
 const mapDispatcherToProps =
     (dispatch: any): ILoginPropsFromDispatch => {
@@ -134,18 +134,29 @@ class Login extends React.Component<ILoginProps, ILoginState> {
                             .then(res => {
                                 if (res.data.result === 201) {
                                     localStorage.setItem("loggedIn", "1");
-                                    localStorage.setItem("userFullName", res.data.email);
-                                    localStorage.setItem("accessToken", res.data.access_token)
-                                    localStorage.setItem("refreshToken", res.data.refresh_token)
-                                    localStorage.setItem("userId", res.data.user_id)
-                                    localStorage.setItem("accessExpires", res.data.access_expires)
-                                    localStorage.setItem("refreshExpires", res.data.refresh_expires)
-                                    history.push("/dashboard");
+                                    localStorage.setItem("userFullName", res.data.full_name);
+                                    localStorage.setItem("accessToken", res.data.access_token);
+                                    localStorage.setItem("refreshToken", res.data.refresh_token);
+                                    localStorage.setItem("userId", res.data.user_id);
+                                    localStorage.setItem("accessExpires", res.data.access_expires);
+                                    localStorage.setItem("refreshExpires", res.data.refresh_expires);
+                                    
                                     showSnackBar!(
                                         res.data.message,
                                         4000,
                                         SnackBarType.Success
-                                    )
+                                    );
+                                    switch (res.data.role) {
+                                        case UserRoleType.Requester:
+                                            history.push("/requester/jobmanagement");
+                                            return;
+                                        case UserRoleType.Annotator:
+                                            history.push("/annotator/jobmanagement");
+                                            return;
+                                        case UserRoleType.Admin:
+                                            history.push("/admin/jobmanagement");
+                                            return;
+                                    }
                                 } else {
                                     this.setState({ errMsg: "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!" });
                                 }
