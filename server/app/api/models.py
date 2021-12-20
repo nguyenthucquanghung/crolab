@@ -48,9 +48,15 @@ class User(AbstractUser):
             'task_c': self.task_c,
         }
 
+    def simple_info(self):
+        return {
+            'id': self.id,
+            'full_name': self.full_name
+        }
+
 
 class Job(models.Model):
-    requester = models.ForeignKey(User, on_delete=models.DO_NOTHING)
+    requester = models.IntegerField()
 
     category = models.SmallIntegerField(choices=Category.choices)
     name = models.CharField(max_length=100)
@@ -68,17 +74,21 @@ class Job(models.Model):
     bonus_threshold = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    truth_qty_ready = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'job'
 
     def to_dict(self):
+        requester = User.objects.filter(pk=self.requester).first()
+        if requester is not None:
+            requester = requester.simple_info()
         return {
             'id': self.id,
             'category': self.category,
             'name': self.name,
             'description': self.description,
-            'requester': self.requester.to_dict(),
+            'requester': requester,
             'unit_qty': self.unit_qty,
             'truth_qty': self.truth_qty,
             'shared_qty': self.shared_qty,
@@ -88,14 +98,15 @@ class Job(models.Model):
             'unit_bonus': self.unit_bonus,
             'accepted_threshold': self.accept_threshold,
             'bonus_threshold': self.bonus_threshold,
+            'truth_qty_ready': self.truth_qty_ready,
             'created_at': self.created_at,
             'updated_at': self.updated_at
         }
 
 
 class Comment(models.Model):
-    user = models.ForeignKey(User, on_delete=models.DO_NOTHING)
-    job = models.ForeignKey(Job, on_delete=DO_NOTHING)
+    user = models.IntegerField()
+    job = models.IntegerField()
     content = models.CharField(max_length=1000)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -103,17 +114,20 @@ class Comment(models.Model):
         db_table = 'comment'
 
     def to_dict(self):
+        user = User.objects.filter(pk=self.user).first()
+        if user is not None:
+            user = user.simple_info()
         return {
             'id': self.id,
-            'user': self.user.to_dict(),
-            'job': self.job.id,
+            'user': user,
+            'job': self.job,
             'content': self.content,
             'created_at': self.created_at
         }
 
 
 class ClassificationLabelType(models.Model):
-    job = models.ForeignKey(Job, on_delete=DO_NOTHING)
+    job = models.IntegerField()
     name = models.CharField(max_length=100, unique=True)
     description = models.CharField(max_length=1000)
 
@@ -123,15 +137,15 @@ class ClassificationLabelType(models.Model):
     def to_dict(self):
         return {
             'id': self.id,
-            'job': self.job.id,
+            'job': self.job,
             'name': self.name,
             'description': self.description
         }
 
 
 class Task(models.Model):
-    job = models.ForeignKey(Job, on_delete=models.DO_NOTHING)
-    annotator = models.ForeignKey(User, on_delete=models.DO_NOTHING)
+    job = models.IntegerField()
+    annotator = models.IntegerField()
     unit_qty = models.IntegerField()
     accepted = models.BooleanField(default=False)
     passed = models.BooleanField(default=False)
@@ -146,43 +160,71 @@ class Task(models.Model):
         db_table = 'task'
 
     def to_dict(self):
+        annotator = User.objects.filter(pk=self.annotator).first()
+        if annotator is not None:
+            annotator = annotator.to_dict()
         return {
             'id': self.id,
-            'annotator': self.annotator.to_dict(),
+            'annotator': annotator,
             'unit_qty': self.unit_qty,
             'accepted': self.accepted,
             'passed': self.passed,
             'rejected': self.rejected,
-            'shared_accuracy': self.shared_accuracy,
-            'truth_accuracy': self.truth_accuracy,
             'created_at': self.created_at
         }
 
+    def to_dict_for_requester(self):
+        result = self.to_dict()
+        result['shared_accuracy'] = self.shared_accuracy
+        result['truth_accuracy'] = self.truth_accuracy
+        return result
+
 
 class Unit(models.Model):
-    job = models.ForeignKey(Job, on_delete=DO_NOTHING)
-    task = models.ForeignKey(Task, on_delete=DO_NOTHING)
+    job = models.IntegerField()
+    task = models.IntegerField(null=True)
     data = models.CharField(max_length=1000)
-    label = models.CharField(max_length=1000)
+    label = models.CharField(max_length=1000, null=True)
     assigned = models.BooleanField(default=False)
+    shared_id = models.IntegerField(null=True, default=None)
+    truth_id = models.IntegerField(null=True, default=None)
 
     class Meta:
         db_table = 'unit'
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'job': self.job,
+            'task': self.task,
+            'data': self.data,
+            'label': self.label,
+            'assigned': self.assigned
+        }
+
 
 class TruthUnit(models.Model):
-    job = models.ForeignKey(Job, on_delete=DO_NOTHING)
+    job = models.IntegerField()
     data = models.CharField(max_length=1000)
-    label = models.CharField(max_length=1000)
+    label = models.CharField(max_length=1000, default=None, null=True)
 
     class Meta:
         db_table = 'truth_unit'
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'job': self.job,
+            'data': self.data,
+            'label': self.label
+        }
+
 
 class TruthLabel(models.Model):
-    truth_unit = models.ForeignKey(TruthUnit, on_delete=DO_NOTHING)
-    task = models.ForeignKey(Task, on_delete=DO_NOTHING)
-    label = models.CharField(max_length=1000)
+    truth_unit = models.IntegerField()
+    task = models.IntegerField()
+    unit = models.IntegerField()
+    label = models.CharField(max_length=1000, default=None, null=True)
     # In scale 0.01
     accuracy = models.IntegerField()
 
@@ -191,18 +233,19 @@ class TruthLabel(models.Model):
 
 
 class SharedUnit(models.Model):
-    job = models.ForeignKey(Job, on_delete=DO_NOTHING)
+    job = models.IntegerField()
     data = models.CharField(max_length=1000)
-    mean_value = models.CharField(max_length=1000)
+    mean_value = models.CharField(max_length=1000, null=True, default=None)
 
     class Meta:
         db_table = 'shared_unit'
 
 
 class SharedLabel(models.Model):
-    shared_unit = models.ForeignKey(SharedUnit, on_delete=DO_NOTHING)
-    task = models.ForeignKey(Task, on_delete=DO_NOTHING)
-    label = models.CharField(max_length=1000)
+    shared_unit = models.IntegerField()
+    task = models.IntegerField()
+    unit = models.IntegerField()
+    label = models.CharField(max_length=1000, default=None, null=True)
     # In scale 0.01
     accuracy = models.IntegerField()
 
@@ -211,7 +254,7 @@ class SharedLabel(models.Model):
 
 
 class Rank(models.Model):
-    user = models.ForeignKey(User, on_delete=DO_NOTHING)
+    user = models.IntegerField()
     rank_category = models.SmallIntegerField(RankCategory.choices)
     offset = models.IntegerField()
     
@@ -220,9 +263,9 @@ class Rank(models.Model):
 
 
 class Rating(models.Model):
-    task = models.ForeignKey(Task, on_delete=DO_NOTHING)
-    rater = models.ForeignKey(User, on_delete=DO_NOTHING, related_name='+')
-    ratee = models.ForeignKey(User, on_delete=DO_NOTHING, related_name='+')
+    task = models.IntegerField()
+    rater = models.IntegerField()
+    ratee = models.IntegerField()
     comment = models.CharField(max_length=1000)
     # By scale 0.01
     rating = models.IntegerField()

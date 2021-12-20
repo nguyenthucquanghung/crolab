@@ -1,8 +1,9 @@
 from storages.backends.azure_storage import AzureStorage
+import os
 
 
-ACCOUNT_NAME = 'crolab'
-ACCOUNT_KEY = 'dZSWtRqd7Yq3RPtF4JHrVsx3OFwlS27xPaEOff23R1CjGlqdQ3gMozuNQ0ZqUMMJ/cjFLA5fCrh311n2ug6UdQ=='
+ACCOUNT_NAME = os.environ.get('ACCOUNT_NAME')
+ACCOUNT_KEY = os.environ.get('ACCOUNT_KEY')
 MEDIA_CONTAINER = 'media'
 STATIC_CONTAINER = 'static'
 

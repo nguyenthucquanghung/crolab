@@ -25,7 +25,7 @@ def is_job_requester(func):
         if job is None:
             return Response({}, status.HTTP_404_NOT_FOUND)
         user = User.objects.filter(email=request.user).first()
-        if job.requester != user:
+        if job.requester != user.id:
             return Response({}, status.HTTP_403_FORBIDDEN)
         return func(view_set, request, pk, *args, **kwargs)
 
@@ -41,7 +41,26 @@ def is_task_requester(func):
         if task is None:
             return Response({}, status.HTTP_404_NOT_FOUND)
         user = User.objects.filter(email=request.user).first()
-        if task.job.requester != user:
+        job = Job.objects.filter(pk=task.job).first()
+        if job is None:
+            return Response({}, status.HTTP_404_NOT_FOUND)
+        if job.requester != user.id:
+            return Response({}, status.HTTP_403_FORBIDDEN)
+        return func(view_set, request, pk, *args, **kwargs)
+
+    return execute
+
+
+def is_task_annotator(func):
+
+    @functools.wraps(func)
+    @auth
+    def execute(view_set, request, pk, *args, **kwargs):
+        task = Task.objects.filter(pk=pk).first()
+        if task is None:
+            return Response({}, status.HTTP_404_NOT_FOUND)
+        user = User.objects.filter(email=request.user).first()
+        if task.annotator != user.id:
             return Response({}, status.HTTP_403_FORBIDDEN)
         return func(view_set, request, pk, *args, **kwargs)
 
