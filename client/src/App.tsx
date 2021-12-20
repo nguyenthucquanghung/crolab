@@ -24,6 +24,8 @@ import { ISnackBarState, SnackBarActions } from "./redux/snackbar/types";
 import { Dispatch } from "redux";
 import Utils from "./utils/utils";
 import JobManagement from "./pages/requesterpages/jobmanagement";
+import "./index.scss";
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 
 function mapDispatcherToProps(dispatch: Dispatch<SnackBarActions>): IAppPropsFromDispatch {
 	return {
@@ -62,6 +64,28 @@ const modalStyle: any = {
 	p: 4,
 	textAlign: "center",
 };
+const theme = createTheme({
+	palette: {
+		primary: {
+			main: '#2196F3'
+		},
+		secondary: {
+			main: '#02BCD5'
+		},
+		success: {
+			main: '#4CB050'
+		},
+		error: {
+			main: '#E91D64'
+		},
+		warning: {
+			main: '#FFC208'
+		},
+		info: {
+			main: '#2196F3'
+		}
+	}
+});
 
 class App extends React.Component<IAppProps> {
 	private onSnackBarClosed = () => {
@@ -69,49 +93,58 @@ class App extends React.Component<IAppProps> {
 	}
 	render() {
 		return (
-			<div className={`container`}>
-				<Header inLoginScreen={window.location.pathname === "/login"} />
-				<Router history={history}>
-					<Route exact path='/' component={Main} />
-					<Route exact path='/register' component={Register} />
-					<Route exact path='/login' component={Login} />
-					<Route exact path='/requester/jobmanagement' component={JobManagement} />
-					<Route exact path='/requester/createjob' component={JobManagement} />
-				</Router>
-				<Modal
-					open={!!this.props.showTopLoading}
-					aria-labelledby="modal-modal-title"
-					aria-describedby="modal-modal-description"
-				>
-					<Box sx={modalStyle}>
-						<Typography
-							id="modal-modal-title"
-							variant="h6"
-							component="h2"
-							sx={{ mb: 3 }}
-						>
-							Xin chờ một chút ...
-						</Typography>
-						<LinearProgress />
-					</Box>
-				</Modal>
-				<Snackbar
-					open={!!this.props.snackBarState?.showSnackBar} autoHideDuration={
-						!!this.props.snackBarState?.duration ?
-							this.props.snackBarState.duration : 2000
-					}
-					onClose={this.onSnackBarClosed}>
-					<Alert
-						onClose={this.onSnackBarClosed}
-						severity={Utils.convertSnackBarType(
-							this.props.snackBarState?.type
-						)}
-						sx={{ width: '100%' }}
+			<ThemeProvider theme={theme}>
+				<Box
+					className={`container`}
+					style={{
+						// backgroundImage: `url("/bg.jpg")`,
+						background: "#F7F9FB"
+					}}>
+					<Header inLoginScreen={window.location.pathname === "/login"} />
+					<Router history={history}>
+						<Route exact path='/' component={Main} />
+						<Route exact path='/register' component={Register} />
+						<Route exact path='/login' component={Login} />
+						<Route exact path='/requester/jobmanagement' component={JobManagement} />
+						<Route exact path='/requester/createjob' component={JobManagement} />
+					</Router>
+					<Modal
+						open={!!this.props.showTopLoading}
+						aria-labelledby="modal-modal-title"
+						aria-describedby="modal-modal-description"
 					>
-						{this.props.snackBarState?.msg}
-					</Alert>
-				</Snackbar>
-			</div >
+						<Box sx={modalStyle}>
+							<Typography
+								id="modal-modal-title"
+								variant="h6"
+								component="h2"
+								sx={{ mb: 3 }}
+							>
+								Xin chờ một chút ...
+							</Typography>
+							<LinearProgress />
+						</Box>
+					</Modal>
+					<Snackbar
+						open={!!this.props.snackBarState?.showSnackBar} autoHideDuration={
+							!!this.props.snackBarState?.duration ?
+								this.props.snackBarState.duration : 2000
+						}
+						onClose={this.onSnackBarClosed}>
+						<Alert
+							onClose={this.onSnackBarClosed}
+							severity={Utils.convertSnackBarType(
+								this.props.snackBarState?.type
+							)}
+							sx={{ width: '100%' }}
+						>
+							{this.props.snackBarState?.msg}
+						</Alert>
+					</Snackbar>
+
+				</Box>
+
+			</ThemeProvider >
 		);
 	}
 }

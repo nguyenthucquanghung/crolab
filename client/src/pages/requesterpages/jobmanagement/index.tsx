@@ -1,4 +1,4 @@
-import { Button, Typography } from "@mui/material";
+import { Box, Button, Typography, List, ListItem, ListItemButton, IconButton, ListItemAvatar, Avatar, ListItemText } from "@mui/material";
 import React from "react";
 import "./index.scss";
 import Table from '@mui/material/Table';
@@ -12,7 +12,9 @@ import { styled } from '@mui/material/styles';
 import Link from '@mui/material/Link';
 import history from "../../../history";
 import jobAPI from "../../../api/jobAPI";
-
+import FolderIcon from '@mui/icons-material/Folder';
+import DeleteIcon from '@mui/icons-material/Delete';
+import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
     [`&.${tableCellClasses.head}`]: {
         backgroundColor: "#1976d2",
@@ -33,11 +35,11 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
     },
 }));
 
-interface IDashboardState {
+interface IJobManagementState {
     jobList: any[];
 }
 
-export default class JobManagement extends React.Component<{}, IDashboardState> {
+export default class JobManagement extends React.Component<{}, IJobManagementState> {
     public constructor(props: any) {
         super(props);
         this.state = {
@@ -52,7 +54,7 @@ export default class JobManagement extends React.Component<{}, IDashboardState> 
                 !!res.data &&
                 !!res.status &&
                 res.status === 200 &&
-                res.data.results.length > 0 
+                res.data.results.length > 0
             ) {
                 this.setState({ jobList: res.data.results })
             }
@@ -60,18 +62,17 @@ export default class JobManagement extends React.Component<{}, IDashboardState> 
     }
     public render() {
         return (
-            <div className={`dashboard-container`}>
+            <Paper className={`job-management-container`}>
                 <Button
                     variant="contained"
                     className={`btn-create-new-prj`}
                     onClick={() => history.push("/createjob")}
                 >
-                    Tạo Job mới
+                    Tạo việc mới
                 </Button>
                 {
-                    this.state.jobList.length > 0 &&
-                    <TableContainer sx={{ mr: "5vw", ml: "5vw", maxWidth: "90vw" }} component={Paper}>
-                        <Table sx={{ minWidth: 700 }} aria-label="customized table">
+                    <TableContainer sx={{mt:2}} component={Paper}>
+                        <Table aria-label="customized table">
                             <TableHead>
                                 <StyledTableRow>
                                     <StyledTableCell>Tên Job</StyledTableCell>
@@ -122,7 +123,7 @@ export default class JobManagement extends React.Component<{}, IDashboardState> 
                         Hiện tại bạn đang không tham gia bất kỳ Job nào, vui lòng tạo một Job mới!
                     </Typography>
                 }
-            </div >
+            </Paper >
         )
     }
 }

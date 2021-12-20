@@ -1,6 +1,13 @@
-.dashboard-container {
+.job-management-container {
+    padding: 50px;
+    height: 80%;
+    width: 70%;
+    margin: auto;
+    margin-top: 3%;
+    display: block;
+    align-items: center;
+    text-align: center;
     .btn-create-new-job {
-        float: right;
         padding: 10px 30px;
         margin: 40px 5vw;
     }

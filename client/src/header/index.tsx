@@ -38,8 +38,8 @@ export default class Header extends React.Component<{ inLoginScreen: boolean }, 
     render() {
         const { inLoginScreen } = this.props;
         return (
-            <AppBar className={`header-container`} position="static">
-                <Toolbar>
+            <AppBar position="static">
+                <Toolbar className={`header-container`} sx={{ p: { md: "auto 20vw" } }}>
                     <div className={`div-logo-home`} onClick={() => history.push("/")}>
                         <img className={`img-home`} src='/crolab_logo.png' alt='crolab_logo' />
                     </div>
@@ -57,9 +57,15 @@ export default class Header extends React.Component<{ inLoginScreen: boolean }, 
                     </Button>}
                     {localStorage.getItem('loggedIn') !== "1" && <Button
                         color="inherit"
-                        onClick={() => { history.push(inLoginScreen ? "/register" : "/login") }}
+                        onClick={() => { history.push("/login") }}
                     >
-                        {inLoginScreen ? `Đăng ký` : `Đăng nhập`}
+                        {`Đăng nhập`}
+                    </Button>}
+                    {localStorage.getItem('loggedIn') !== "1" && <Button
+                        color="inherit"
+                        onClick={() => { history.push("/register") }}
+                    >
+                        {`Đăng ký`}
                     </Button>}
                 </Toolbar>
                 <Menu

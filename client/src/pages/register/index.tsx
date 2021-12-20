@@ -1,6 +1,6 @@
 import "./index.scss"
 import history from "../../history";
-import { Button, TextField } from "@mui/material";
+import { Button, Paper, TextField } from "@mui/material";
 import React from "react";
 import * as generalActions from "../../redux/general/actions";
 import * as snackBarActions from "../../redux/snackbar/actions";
@@ -52,7 +52,7 @@ class Register extends React.Component<IRegisterProps, IRegisterState> {
     render() {
         const { email, password, fName, confirmPassword, errMsg, confirmPasswordErrMsg } = this.state;
         return (
-            <div className={`register-container`}>
+            <Paper className={`register-container`}>
                 <img src='/crolab_logo.png' alt='crolab_logo' />
                 <h1>Đăng ký</h1>
                 <TextField
@@ -156,7 +156,7 @@ class Register extends React.Component<IRegisterProps, IRegisterState> {
                 >
                     Đăng ký tài khoản
                 </Button>
-            </div >
+            </Paper >
         )
     }
 }

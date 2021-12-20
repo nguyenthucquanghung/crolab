@@ -1,4 +1,4 @@
-import { Box, Button, Checkbox, TextField, Typography } from "@mui/material";
+import { Box, Button, Checkbox, Paper, TextField, Typography } from "@mui/material";
 import React from "react";
 import "./index.scss"
 import history from "../../history";
@@ -45,7 +45,7 @@ class Login extends React.Component<ILoginProps, ILoginState> {
         const { errMsg, emailErrMsg, passwordErrMsg, email, password } = this.state;
         const { showTopLoading, hideTopLoading, showSnackBar } = this.props;
         return (
-            <div className={`login-container`}>
+            <Paper className={`login-container`}>
                 <img
                     className={`img-logo`}
                     src="/crolab_logo.png"
@@ -96,8 +96,8 @@ class Login extends React.Component<ILoginProps, ILoginState> {
                         })
                     }}
                 />
-                {!!errMsg && <p style={{ color: "#d32f2f" }}>{errMsg}</p>}
-                <Box>
+                {!!errMsg && <p style={{ marginTop: "20px", color: "#d32f2f" }}>{errMsg}</p>}
+                <Box sx={{mt:"15px", mb:"10px"}}>
                     <Checkbox />
                     <Typography
                         variant="body1"
@@ -138,6 +138,7 @@ class Login extends React.Component<ILoginProps, ILoginState> {
                                     localStorage.setItem("accessToken", res.data.access_token);
                                     localStorage.setItem("refreshToken", res.data.refresh_token);
                                     localStorage.setItem("userId", res.data.user_id);
+                                    localStorage.setItem("userRole", res.data.role);
                                     localStorage.setItem("accessExpires", res.data.access_expires);
                                     localStorage.setItem("refreshExpires", res.data.refresh_expires);
                                     
@@ -199,7 +200,7 @@ class Login extends React.Component<ILoginProps, ILoginState> {
                     Đăng nhập
                 </Button>
 
-            </div >
+            </Paper >
         )
     }
 }
