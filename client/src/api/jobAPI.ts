@@ -1,34 +1,48 @@
 import API from "./api";
 class JobAPI {
+    getOwnedJobs = () => {
+        const url = `/job/list_owned_job/`
+        return API.get(url);
+    }
+
     getAllJobs = () => {
         const url = '/job/';
         return API.get(url);
     };
+
     getJobDetail = (id: string) => {
         const url = `/job/${id}`;
         return API.get(url);
     };
+
     createJob = (
         pName: string,
         pDesc: string,
-        pK: string,
-        pB1: string,
-        pNoSeqHL: string,
-        pMinTabRowHL: string,
-        pMaxTabRowHL: string,
-        pEsId: string,
-        pFile: any,
+        pCategory: number,
+        pTruthQty: number,
+        pSharedQty: number,
+        pMinQty: number,
+        pUnitWage: number,
+        pUnitBonus: number,
+        pAcceptThreshold: number,
+        pBonusThreshold: number,
+        pFiles: FileList,
     ) => {
+        console.log(pFiles);
         let formData = new FormData();
-        formData.append("file", pFile);
         formData.append("name", pName);
         formData.append("description", pDesc);
-        formData.append("k", pK);
-        formData.append("b1", pB1);
-        formData.append("num_sequence_highlight", pNoSeqHL);
-        formData.append("min_table_row_highlight", pMinTabRowHL);
-        formData.append("max_table_row_highlight", pMaxTabRowHL);
-        formData.append("es_id", pEsId);
+        formData.append("category", pCategory.toString());
+        formData.append("truth_qty", pTruthQty.toString());
+        formData.append("shared_qty", pSharedQty.toString());
+        formData.append("min_qty", pMinQty.toString());
+        formData.append("unit_wage", pUnitWage.toString());
+        formData.append("unit_bonus", pUnitBonus.toString());
+        formData.append("accept_threshold", pAcceptThreshold.toString());
+        formData.append("bonus_threshold", pBonusThreshold.toString());
+        Array.from(pFiles).forEach(file => {
+            formData.append("audio_files", file);
+        })
         const url = "/job/";
         return API.post(
             url,

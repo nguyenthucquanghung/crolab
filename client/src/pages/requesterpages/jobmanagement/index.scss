@@ -1,14 +1,9 @@
 .job-management-container {
     padding: 50px;
-    height: 80%;
+    height: 60%;
     width: 70%;
     margin: auto;
     margin-top: 3%;
-    display: block;
-    align-items: center;
-    text-align: center;
-    .btn-create-new-job {
-        padding: 10px 30px;
-        margin: 40px 5vw;
-    }
+    display: flex;
+    flex-direction: column;
 }

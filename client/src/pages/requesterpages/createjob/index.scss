@@ -1,10 +1,17 @@
 .createjob-container {
-    display: block;
-    text-align: center;
+    padding: 50px;
+    height: 70%;
+    width: 70%;
+    margin: auto;
+    margin-top: 3%;
+    // align-items: center;
+    display: flex;
+    // text-align: center;
+    overflow-y: auto;
     .div-upload {
         .pp-status {
             display: inline-block;
-            width: 170px;
+            width: 200px;
             margin-left: 20px;
             line-height: 40px;
             overflow: hidden;
@@ -15,21 +22,16 @@
         .bt-upload {
             vertical-align: top;
             line-height: 30px;
-            width: 190px;
+            width: 200px;
+            color: white;
         }
     }
     .bt-create {
-        display: inline-block;
+        // display: inline-block;
         line-height: 30px;
-        margin-top: 50px;
-        width: 400px;
+        width: 200px;
     }
     .tf {
-        margin: 20px auto;
         display: block;
-        width: 400px;
-        .MuiOutlinedInput-root {
-            width: 400px;
-        }
     }
 }

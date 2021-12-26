@@ -15,115 +15,140 @@ import jobAPI from "../../../api/jobAPI";
 import FolderIcon from '@mui/icons-material/Folder';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
+import ReportIcon from '@mui/icons-material/Report';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
-    [`&.${tableCellClasses.head}`]: {
-        backgroundColor: "#1976d2",
-        color: theme.palette.common.white,
-    },
-    [`&.${tableCellClasses.body}`]: {
-        fontSize: 14,
-    },
+	[`&.${tableCellClasses.head}`]: {
+		backgroundColor: "#1976d2",
+		color: theme.palette.common.white,
+	},
+	[`&.${tableCellClasses.body}`]: {
+		fontSize: 14,
+	},
 }));
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
-    '&:nth-of-type(odd)': {
-        backgroundColor: theme.palette.action.hover,
-    },
-    // hide last border
-    '&:last-child td, &:last-child th': {
-        border: 0,
-    },
+	'&:nth-of-type(odd)': {
+		backgroundColor: theme.palette.action.hover,
+	},
+	// hide last border
+	'&:last-child td, &:last-child th': {
+		border: 0,
+	},
 }));
 
 interface IJobManagementState {
-    jobList: any[];
+	jobList: any[];
 }
 
 export default class JobManagement extends React.Component<{}, IJobManagementState> {
-    public constructor(props: any) {
-        super(props);
-        this.state = {
-            jobList: []
-        }
-    }
-    public componentDidMount() {
-        jobAPI.getAllJobs().then(res => {
-            console.log(res);
-            if (
-                !!res &&
-                !!res.data &&
-                !!res.status &&
-                res.status === 200 &&
-                res.data.results.length > 0
-            ) {
-                this.setState({ jobList: res.data.results })
-            }
-        })
-    }
-    public render() {
-        return (
-            <Paper className={`job-management-container`}>
-                <Button
-                    variant="contained"
-                    className={`btn-create-new-prj`}
-                    onClick={() => history.push("/createjob")}
-                >
-                    Tạo việc mới
-                </Button>
-                {
-                    <TableContainer sx={{mt:2}} component={Paper}>
-                        <Table aria-label="customized table">
-                            <TableHead>
-                                <StyledTableRow>
-                                    <StyledTableCell>Tên Job</StyledTableCell>
-                                    {/* <StyledTableCell align="center">Quản lý Job</StyledTableCell> */}
-                                    <StyledTableCell align="center">Mô tả</StyledTableCell>
-                                    {/* <StyledTableCell align="center">Mệnh đề</StyledTableCell>
-                                    <StyledTableCell align="center">Tiến trình</StyledTableCell> */}
-                                    {/* <StyledTableCell align="center">Elasticsearch Index</StyledTableCell>  */}
-                                </StyledTableRow>
-                            </TableHead>
-                            <TableBody>
-                                {this.state.jobList.map((row) => (
-                                    <StyledTableRow
-                                        key={row.name}
-                                        sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                                    >
-                                        <StyledTableCell component="th" scope="row">
-                                            <Link
-                                                href={`/job/${row.id}`}
-                                                sx={{ cursor: "pointer" }}
-                                            >
-                                                {row.name}
-                                            </Link>
-                                        </StyledTableCell>
-                                        {/* <StyledTableCell align="center">{row.owner?.full_name}</StyledTableCell> */}
-                                        <StyledTableCell align="center">{row.description}</StyledTableCell>
-                                        {/* <StyledTableCell align="center">{row.total}</StyledTableCell>
-                                        <StyledTableCell align="center">{row.done}/{row.total}</StyledTableCell> */}
-                                        {/* <StyledTableCell align="center">{row.es_id}</StyledTableCell>  */}
-                                    </StyledTableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                }
-                {
-                    this.state.jobList.length === 0 &&
-                    <Typography
-                        variant="h3"
-                        component="div"
-                        sx={{
-                            mt: "20px",
-                            fontStyle: "bold",
-                            textAlign: "center",
-                            width: "100vw",
-                        }}
-                    >
-                        Hiện tại bạn đang không tham gia bất kỳ Job nào, vui lòng tạo một Job mới!
-                    </Typography>
-                }
-            </Paper >
-        )
-    }
+	public constructor(props: any) {
+		super(props);
+		this.state = {
+			jobList: []
+		}
+	}
+
+	public componentDidMount() {
+		jobAPI.getOwnedJobs().then(res => {
+			console.log(res);
+			if (
+				!!res &&
+				!!res.data &&
+				!!res.status &&
+				res.status === 200 &&
+				res.data.results.length > 0
+			) {
+				this.setState({ jobList: res.data.results })
+			}
+		})
+	}
+
+	public render() {
+		return (
+			<Paper className={`job-management-container`}>
+				<Typography
+					variant="h6"
+					component="div"
+				>
+					Quản lý công việc
+				</Typography>
+				{
+					this.state.jobList.length === 0 &&
+					<Typography
+						variant="h6"
+						component="div"
+						sx={{
+							mb: "20px",
+							fontStyle: "bold",
+							textAlign: "center",
+							// width: "100vw",
+						}}
+					>
+						Hiện tại chưa có việc làm nào được tạo. Tạo việc làm mới ngay!
+					</Typography>
+				}
+
+				{this.state.jobList.length > 0 &&
+					<TableContainer sx={{ mt: 2 }} component={Paper}>
+						<Table aria-label="customized table">
+							<TableHead>
+								<StyledTableRow>
+									<StyledTableCell>ID</StyledTableCell>
+									<StyledTableCell align="center">Tóm tắt</StyledTableCell>
+									<StyledTableCell align="center">Mô tả</StyledTableCell>
+									<StyledTableCell align="center">Tiến độ</StyledTableCell>
+									<StyledTableCell align="center">Ngày tạo</StyledTableCell>
+									<StyledTableCell align="center">Ngưỡng chấp nhận</StyledTableCell>
+									<StyledTableCell align="center">Lương/Đơn vị</StyledTableCell>
+									<StyledTableCell align="center">Trạng thái</StyledTableCell>
+								</StyledTableRow>
+							</TableHead>
+							<TableBody>
+								{this.state.jobList.map((row) => (
+									<StyledTableRow
+										key={row.name}
+										sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+									>
+										<StyledTableCell >{row.id}</StyledTableCell>
+										<StyledTableCell align="center" component="th" scope="row">
+											<Link
+												href={`/job/${row.id}`}
+												sx={{ cursor: "pointer" }}
+											>
+												{row.name}
+											</Link>
+										</StyledTableCell>
+										<StyledTableCell align="center">{row.description}</StyledTableCell>
+										<StyledTableCell align="center">{`${row.accepted_qty}/${row.unit_qty}`}</StyledTableCell>
+										<StyledTableCell align="center">{row.created_at.split('T')[0]}</StyledTableCell>
+										<StyledTableCell align="center">{`${row.accepted_threshold}%`}</StyledTableCell>
+										<StyledTableCell align="center">{`${row.unit_wage} VND`}</StyledTableCell>
+										<StyledTableCell align="center">{row.truth_qty_ready ?
+											<Box>
+												<CheckCircleIcon sx={{ fontSize: "1.1rem" }} color="success" /> <span>Sẵn sàng</span>
+											</Box> :
+											<Box>
+												<ReportIcon sx={{ fontSize: "1.1rem" }} color="warning" /> <span style={{ verticalAlign: "top" }} >Chưa sẵn sàng</span>
+											</Box>
+										}</StyledTableCell>
+									</StyledTableRow>
+								))}
+							</TableBody>
+						</Table>
+					</TableContainer>
+				}
+				<Box sx={{ flexGrow: 1 }} />
+				<Button
+					sx={{ width: "max-content" }}
+					variant="contained"
+					className={`btn-create-new-prj`}
+					onClick={() => history.push("/requester/createjob")}
+				>
+					Tạo việc làm mới
+				</Button>
+			</Paper >
+		)
+	}
 }

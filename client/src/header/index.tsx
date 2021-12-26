@@ -48,6 +48,12 @@ export default class Header extends React.Component<{ inLoginScreen: boolean }, 
                     </Typography>
                     <Typography component="div" sx={{ flexGrow: 1, display: { xs: 'block', sm: 'block', md: 'none' } }}>
                     </Typography>
+                    <Button color="inherit">
+                        Quản lý công việc
+                    </Button>
+                    <Button color="inherit">
+                        Danh sách yêu cầu
+                    </Button>
                     {localStorage.getItem('loggedIn') === "1" && <Button
                         color="inherit"
                         onClick={this.handleMenuOpen}

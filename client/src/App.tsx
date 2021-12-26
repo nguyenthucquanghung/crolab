@@ -26,6 +26,8 @@ import Utils from "./utils/utils";
 import JobManagement from "./pages/requesterpages/jobmanagement";
 import "./index.scss";
 import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CreateJob from "./pages/requesterpages/createjob";
+import AnnotateTruth from "./pages/requesterpages/annotatetruth";
 
 function mapDispatcherToProps(dispatch: Dispatch<SnackBarActions>): IAppPropsFromDispatch {
 	return {
@@ -106,7 +108,8 @@ class App extends React.Component<IAppProps> {
 						<Route exact path='/register' component={Register} />
 						<Route exact path='/login' component={Login} />
 						<Route exact path='/requester/jobmanagement' component={JobManagement} />
-						<Route exact path='/requester/createjob' component={JobManagement} />
+						<Route exact path='/requester/createjob' component={CreateJob} />
+						<Route exact path='/requester/job/:jobid/annotatetruth/' component={AnnotateTruth} />
 					</Router>
 					<Modal
 						open={!!this.props.showTopLoading}
