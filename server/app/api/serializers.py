@@ -34,7 +34,7 @@ class JobSerializer(serializers.ModelSerializer):
     class Meta:
         model = Job
         fields = ('category', 'name', 'description', 'truth_qty', 'shared_qty', 'min_qty',
-                  'unit_wage', 'unit_bonus', 'accept_threshold', 'bonus_threshold')
+                  'unit_wage', 'unit_bonus', 'accept_threshold', 'bonus_threshold', 'deadline')
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -69,3 +69,15 @@ class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = ('unit_qty', 'job')
+
+
+class RateSerializer(serializers.ModelSerializer):
+
+    def validate(self, data):
+        if data['rating'] > 50:
+            raise serializers.ValidationError({'rating': 'rating must be in range 0-50'})
+        return data
+
+    class Meta:
+        model = Rating
+        fields = ('comment', 'rating', 'task')

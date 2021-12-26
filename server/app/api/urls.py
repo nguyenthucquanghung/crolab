@@ -1,6 +1,6 @@
 from django.urls import path
 from django.urls.conf import include
-from .views import  UserRegisterView, UserLoginView, JobViewSet, CommentViewSet, TaskViewSet
+from .views import  UserRegisterView, UserLoginView, JobViewSet, CommentViewSet, TaskViewSet, RateViewSet
 from rest_framework import routers
 
 
@@ -8,6 +8,7 @@ router = routers.DefaultRouter()
 router.register(r'job', JobViewSet)
 router.register(r'comment', CommentViewSet)
 router.register(r'task', TaskViewSet)
+router.register(r'rate', RateViewSet)
 
 urlpatterns = [
     path('auth/register', UserRegisterView.as_view()),
