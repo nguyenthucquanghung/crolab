@@ -10,12 +10,14 @@ from rest_framework.decorators import action
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import *
 from django.db import models
-from .serializers import UserSerializer, UserLoginSerializer, JobSerializer, CommentSerializer, TaskSerializer
+from .serializers import UserSerializer, UserLoginSerializer, JobSerializer, CommentSerializer, TaskSerializer, RateSerializer
 from django.conf import settings
 from .utils import *
+from .label_validate import *
 import uuid
 from azure.storage.blob import BlockBlobService
 from azure.storage.blob.models import ContentSettings
+import datetime
 
 ACCOUNT_NAME = os.environ.get('ACCOUNT_NAME')
 ACCOUNT_KEY = os.environ.get('ACCOUNT_KEY')
@@ -131,7 +133,7 @@ class JobViewSet(viewsets.ModelViewSet):
                 Unit.objects.bulk_create(units)
 
                 # Create truth and shared unit
-                units = Unit.objects.filter(job=job.id).order_by('?')[:job.truth_qty+job.shared_qty]
+                units = Unit.objects.filter(job=job.id).order_by('?')[:job.truth_qty + job.shared_qty]
                 truth_units = []
                 shared_units = []
                 for i in range(0, job.truth_qty):
@@ -163,7 +165,7 @@ class JobViewSet(viewsets.ModelViewSet):
     # List available jobs for applying
     @auth
     def list(self, request):
-        query_set = self.queryset.filter(unit_qty__gt=models.F('accepted_qty'), truth_qty_ready=True)\
+        query_set = self.queryset.filter(unit_qty__gt=models.F('accepted_qty'), truth_qty_ready=True) \
             .order_by('-updated_at')
 
         paginator = PageNumberPagination()
@@ -367,7 +369,10 @@ class TaskViewSet(viewsets.ModelViewSet):
         job.accepted_qty = job.accepted_qty + task.unit_qty
         job.save()
         task.accepted = True
+        task.accepted_at = datetime.datetime.now()
         task.save()
+
+        # TODO: mix all units
 
         # Clone truth unit
         truth_units = TruthUnit.objects.filter(job=job.id)
@@ -381,12 +386,13 @@ class TaskViewSet(viewsets.ModelViewSet):
         shared_units = SharedUnit.objects.filter(job=job.id)
         for shared_unit in shared_units:
             unit = Unit.objects.create(job=job.id, task=task.id, data=shared_unit.data, assigned=True)
-            shared_label = SharedLabel.objects.create(shared_unit=shared_unit.id, task=task.id, unit=unit.id, accuracy=0)
+            shared_label = SharedLabel.objects.create(shared_unit=shared_unit.id, task=task.id, unit=unit.id,
+                                                      accuracy=0)
             unit.shared_id = shared_label.id
             unit.save()
 
         # assign normal unit
-        units = Unit.objects.filter(job=job.id, assigned=False)[:task.unit_qty]
+        units = Unit.objects.filter(job=job.id, assigned=False)[:(task.unit_qty-shared_units.count()-truth_units.count())]
         for unit in units:
             unit.task = task.id
             unit.assigned = True
@@ -398,13 +404,44 @@ class TaskViewSet(viewsets.ModelViewSet):
     @is_task_requester
     def reject_task(self, request, pk=None):
         task = self.queryset.filter(pk=pk).first()
+        job = Job.objects.filter(pk=task.job).first()
         if task.rejected:
             return Response({
                 'errors': 'Task has been rejected'
             }, status.HTTP_400_BAD_REQUEST)
-        job = Job.objects.filter(pk=task.job).first()
-        job.accepted_qty = job.accepted_qty - task.unit_qty
-        job.save()
+        if task.passed:
+            return Response({
+                'errors': 'Task already passed'
+            }, status.HTTP_400_BAD_REQUEST)
+        if not task.is_submitted:
+            # TODO: check deadline
+            is_meet_deadline = True
+            if not is_meet_deadline and task.accepted:
+                return Response({
+                    'errors': 'Task not meet deadline yet'
+                }, status.HTTP_400_BAD_REQUEST)
+        else:
+            if task.truth_accuracy >= job.accept_threshold:
+                return Response({
+                    'errors': 'Can not reject submitted task with accuracy > job accept threshold'
+                }, status.HTTP_400_BAD_REQUEST)
+
+        if task.accepted:
+            job.accepted_qty = job.accepted_qty - task.unit_qty
+            job.save()
+            # Clear normal units & delete all shared/truth unit
+            assigned_unit = Unit.objects.filter(task=task.id)
+            for unit in assigned_unit:
+                if unit.shared_id is not None or unit.truth_id is not None:
+                    unit.delete()
+                else:
+                    unit.assigned = False
+                    unit.task = None
+                    unit.label = None
+                    unit.save()
+            # Delete all truth * shared label
+            SharedLabel.objects.filter(task=task.id).delete()
+            TruthLabel.objects.filter(task=task.id).delete()
         task.rejected = True
         task.save()
         return Response(task.to_dict(), status.HTTP_201_CREATED)
@@ -413,20 +450,68 @@ class TaskViewSet(viewsets.ModelViewSet):
     @is_task_requester
     def set_task_passed(self, request, pk=None):
         task = self.queryset.filter(pk=pk).first()
+        if not task.accepted:
+            return Response({
+                'errors': 'task not accepted'
+            }, status.HTTP_400_BAD_REQUEST)
+        if task.rejected:
+            return Response({
+                'errors': 'task rejected'
+            }, status.HTTP_400_BAD_REQUEST)
+        if task.passed:
+            return Response({
+                'errors': 'task passed'
+            }, status.HTTP_400_BAD_REQUEST)
+        if not task.is_submitted:
+            return Response({
+                'errors': 'task not submitted'
+            }, status.HTTP_400_BAD_REQUEST)
         task.passed = True
         task.save()
+
+        # Update user profile
+        user = User.objects.filter(pk=task.annotator).first()
+        truth_labels = TruthLabel.objects.filter(task=task.id)
+        shared_labels = SharedLabel.objects.filter(task=task.id)
+        user.task_c = user.task_c + 1
+        user.label_c = user.label_c + task.unit_qty
+
+        # Calculate truth accuracy
+        new_truth_count = truth_labels.count() + user.truth_label_c
+        added_total_truth = 0
+        for truth_label in truth_labels:
+            added_total_truth += truth_label.accuracy
+        user.mean_truth_accuracy = user.mean_truth_accuracy * (user.truth_label_c / new_truth_count) + float(added_total_truth) / new_truth_count
+        user.truth_label_c = new_truth_count
+
+        # Calculate shared accuracy
+        new_shared_count = shared_labels.count() + user.shared_label_c
+        added_total_shared = 0
+        for shared_label in shared_labels:
+            added_total_shared += shared_label.accuracy
+        user.mean_shared_accuracy = user.mean_shared_accuracy * (user.shared_label_c / new_shared_count) + float(added_total_shared) / new_shared_count
+        user.shared_label_c = new_shared_count
+
+        user.save()
         return Response(task.to_dict(), status.HTTP_201_CREATED)
 
     @is_task_annotator
     def retrieve(self, request, pk=None):
         task = Task.objects.filter(pk=pk).first()
-        units = Unit.objects.filter(task=pk)
-        unit_data = []
+        query_set = Unit.objects.filter(task=pk)
+        paginator = PageNumberPagination()
+        units = paginator.paginate_queryset(query_set, request)
+        result = []
         for unit in units:
-            unit_data.append(unit.to_dict())
+            result.append(unit.to_dict())
         return Response({
             'task': task.to_dict(),
-            'units': unit_data
+            'units': {
+                'total': query_set.count(),
+                'prev': paginator.get_previous_link(),
+                'next': paginator.get_next_link(),
+                'results': result
+            }
         }, status.HTTP_200_OK)
 
     @action(detail=True, methods=['PUT'])
@@ -434,6 +519,10 @@ class TaskViewSet(viewsets.ModelViewSet):
     def submit_label(self, request, pk=None):
         units = request.data.get('units', None)
         task = Task.objects.filter(pk=pk).first()
+        if not task.accepted or task.passed or task.rejected:
+            return Response({
+                'errors': 'Task can not be processed now'
+            }, status.HTTP_403_FORBIDDEN)
         if units is None:
             return Response({
                 'errors': 'units is required'
@@ -455,34 +544,45 @@ class TaskViewSet(viewsets.ModelViewSet):
                 }, status.HTTP_400_BAD_REQUEST)
             item.label = unit['label']
             items.append(item)
+        Unit.objects.bulk_update(items, ['label'])
+        is_has_truth_label = False
+        is_has_shared_label = False
         for item in items:
-            item.save()
             if item.truth_id is not None:
+                is_has_truth_label = True
                 truth_label = TruthLabel.objects.filter(pk=item.truth_id).first()
                 truth_label.label = item.label
-                # TODO: calculate truth label accuracy
-                truth_label.accuracy = 100
+                truth_unit = TruthUnit.objects.filter(pk=truth_label.truth_unit).first()
+                truth_label.accuracy = validate_string_label(truth_label.label, truth_unit.label)
                 truth_label.save()
             if item.shared_id is not None:
+                is_has_shared_label = True
                 shared_label = SharedLabel.objects.filter(pk=item.shared_id).first()
                 shared_label.label = item.label
-                # TODO: calculate shared label accuracy
-                shared_label.accuracy = 100
+                shared_label.save()
+                total_accuracy = 0
+                shared_labels = SharedLabel.objects.filter(shared_unit=shared_label.shared_unit).exclude(label=None)
+                count_shared_label = shared_labels.count()
+                for i in shared_labels:
+                    total_accuracy += validate_string_label(shared_label.label, i.label)
+                shared_label.accuracy = int(total_accuracy / count_shared_label)
                 shared_label.save()
 
-        # Calculate task's truth accuracy
-        truth_labels = TruthLabel.objects.filter(task=pk)
-        total_truth_score = 0
-        for truth_label in truth_labels:
-            total_truth_score += truth_label.accuracy
-        task.truth_accuracy = total_truth_score/truth_labels.count()
+        if is_has_truth_label:
+            # Calculate task's truth accuracy
+            truth_labels = TruthLabel.objects.filter(task=pk).exclude(label=None)
+            total_truth_score = 0
+            for truth_label in truth_labels:
+                total_truth_score += truth_label.accuracy
+            task.truth_accuracy = total_truth_score / truth_labels.count()
 
-        # Calculate task's shared accuracy
-        shared_labels = SharedLabel.objects.filter(task=pk)
-        total_shared_score = 0
-        for shared_label in shared_labels:
-            total_shared_score += shared_label.accuracy
-        task.shared_accuracy = total_shared_score/shared_labels.count()
+        if is_has_shared_label:
+            # Calculate task's shared accuracy
+            shared_labels = SharedLabel.objects.filter(task=pk).exclude(label=None)
+            total_shared_score = 0
+            for shared_label in shared_labels:
+                total_shared_score += shared_label.accuracy
+            task.shared_accuracy = total_shared_score / shared_labels.count()
 
         task.save()
         return Response({}, status.HTTP_201_CREATED)
@@ -496,10 +596,71 @@ class TaskViewSet(viewsets.ModelViewSet):
         result = []
         for task in tasks:
             result.append(task.to_dict())
-        # TODO: get task's process
         return Response({
             'total': query_set.count(),
             'prev': paginator.get_previous_link(),
             'next': paginator.get_next_link(),
             'results': result
         }, status.HTTP_200_OK)
+
+    @action(detail=True, methods=['PUT'])
+    @is_task_annotator
+    def submit(self, request, pk=None):
+        task = Task.objects.filter(pk=pk).first()
+        if task.is_submitted:
+            return Response({
+                'errors': 'Task already submitted'
+            }, status.HTTP_400_BAD_REQUEST)
+        if not task.accepted:
+            return Response({
+                'errors': 'Task not accepted'
+            }, status.HTTP_400_BAD_REQUEST)
+        not_labeled_unit = Unit.objects.filter(task=task.id, label=None)
+        if not_labeled_unit.count() > 0:
+            return Response({
+                'errors': 'task not fully labeled'
+            }, status.HTTP_400_BAD_REQUEST)
+        task.is_submitted = True
+        task.save()
+        return Response(task.to_dict(), status.HTTP_201_CREATED)
+
+
+class RateViewSet(viewsets.ModelViewSet):
+    queryset = Rating.objects.all()
+    serializer_class = RateSerializer
+
+    @auth
+    def create(self, request):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            user = User.objects.filter(email=request.user).first()
+            rate = Rating.objects.filter(task=request.data['task'], rater=user.id).first()
+            if rate is not None:
+                return Response({
+                    'errors': 'You already rated this task'
+                }, status.HTTP_400_BAD_REQUEST)
+            task = Task.objects.filter(pk=request.data['task']).first()
+            if not task.passed:
+                return Response({
+                    'errors': 'Can not rate not passed task'
+                }, status.HTTP_400_BAD_REQUEST)
+            annotator = User.objects.filter(pk=task.annotator).first()
+            job = Job.objects.filter(pk=task.job).first()
+            requester = User.objects.filter(pk=job.requester).first()
+            if user != annotator and user != requester:
+                return Response({}, status.HTTP_403_FORBIDDEN)
+            if user == annotator:
+                rate = serializer.save(ratee=requester.id, rater=user.id)
+            if user == requester:
+                rate = serializer.save(ratee=annotator.id, rater=requester.id)
+            # Update user rating
+            ratee = User.objects.filter(pk=rate.ratee).first()
+            new_rate_count = 1 + ratee.rate_c
+            ratee.rating = ratee.rating * (user.rate_c / new_rate_count) + float(rate.rating) / new_rate_count
+            ratee.rate_c = new_rate_count
+            ratee.save()
+            return Response(rate.to_dict(), status.HTTP_201_CREATED)
+        else:
+            return JsonResponse({
+                'errors': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)

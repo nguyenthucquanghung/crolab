@@ -20,9 +20,13 @@ class User(AbstractUser):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     # In scale 0.01, Eg: rating=480 mean 4.8 star
-    rating = models.IntegerField(default=0)
+    rate_c = models.IntegerField(default=0)
+    rating = models.FloatField(default=0)
     # In scale 0.01, Eg: rating=68 mean 68% accuracy
-    mean_accuracy = models.IntegerField(default=0)
+    truth_label_c = models.IntegerField(default=0)
+    mean_truth_accuracy = models.FloatField(default=0)
+    shared_label_c = models.IntegerField(default=0)
+    mean_shared_accuracy = models.FloatField(default=0)
     label_c = models.IntegerField(default=0)
     task_c = models.IntegerField(default=0)
 
@@ -43,7 +47,8 @@ class User(AbstractUser):
             'created_at': self.created_at,
             'updated_at': self.updated_at,
             'rating': self.rating,
-            'mean_accuracy': self.mean_accuracy,
+            'mean_truth_accuracy': self.mean_truth_accuracy,
+            'mean_shared_accuracy': self.mean_shared_accuracy,
             'label_c': self.label_c,
             'task_c': self.task_c,
         }
@@ -75,6 +80,8 @@ class Job(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     truth_qty_ready = models.BooleanField(default=False)
+    # Default of deadline is 10 days
+    deadline = models.IntegerField(default=10)
 
     class Meta:
         db_table = 'job'
@@ -99,6 +106,7 @@ class Job(models.Model):
             'accepted_threshold': self.accept_threshold,
             'bonus_threshold': self.bonus_threshold,
             'truth_qty_ready': self.truth_qty_ready,
+            'deadline': str(self.deadline) + ' days',
             'created_at': self.created_at,
             'updated_at': self.updated_at
         }
@@ -155,6 +163,8 @@ class Task(models.Model):
     # In scale 0.01
     truth_accuracy = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
+    accepted_at = models.DateTimeField(auto_now_add=True)
+    is_submitted = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'task'
@@ -163,14 +173,19 @@ class Task(models.Model):
         annotator = User.objects.filter(pk=self.annotator).first()
         if annotator is not None:
             annotator = annotator.to_dict()
+        units = Unit.objects.filter(task=self.id)
+        not_labeled_units = Unit.objects.filter(task=self.id, label=None)
         return {
             'id': self.id,
             'annotator': annotator,
             'unit_qty': self.unit_qty,
+            'labeled_unit': units.count() - not_labeled_units.count(),
             'accepted': self.accepted,
             'passed': self.passed,
             'rejected': self.rejected,
-            'created_at': self.created_at
+            'is_submitted': self.is_submitted,
+            'created_at': self.created_at,
+            'accepted_at': self.accepted_at
         }
 
     def to_dict_for_requester(self):
@@ -272,3 +287,18 @@ class Rating(models.Model):
 
     class Meta:
         db_table = 'rating'
+
+    def to_dict(self):
+        rater = User.objects.filter(pk=self.rater).first()
+        if rater is not None:
+            rater = rater.to_dict()
+        ratee = User.objects.filter(pk=self.ratee).first()
+        if ratee is not None:
+            ratee = ratee.to_dict()
+        return {
+            'task_id': self.task,
+            'rater': rater,
+            'ratee': ratee,
+            'comment': self.comment,
+            'rating': self.rating
+        }
