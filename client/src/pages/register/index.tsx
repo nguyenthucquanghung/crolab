@@ -1,12 +1,12 @@
 import "./index.scss"
 import history from "../../history";
-import { Button, FormControl, InputLabel, MenuItem, Paper, Select, Stack, TextField } from "@mui/material";
+import {Button, FormControl, InputLabel, MenuItem, Paper, Select, Stack, TextField} from "@mui/material";
 import React from "react";
 import * as generalActions from "../../redux/general/actions";
 import * as snackBarActions from "../../redux/snackbar/actions";
-import { connect } from "react-redux";
+import {connect} from "react-redux";
 import userAPI from "../../api/userAPI";
-import { GenderType, SnackBarType, UserRoleType } from "../../utils/enumerates";
+import {GenderType, SnackBarType, UserRoleType} from "../../utils/enumerates";
 
 const mapDispatcherToProps =
 	(dispatch: any): IRegisterPropsFromDispatch => {
@@ -16,11 +16,13 @@ const mapDispatcherToProps =
 			hideTopLoading: () => dispatch(generalActions.hideTopLoading()),
 		}
 	}
+
 interface IRegisterPropsFromDispatch {
 	showTopLoading?: () => void;
 	hideTopLoading?: () => void;
 	showSnackBar?: (pMsg: string, pDuration: number, pType: SnackBarType) => void;
 }
+
 interface IRegisterState {
 	email: string;
 	password: string;
@@ -35,6 +37,7 @@ interface IRegisterState {
 	role: UserRoleType;
 	gender: GenderType;
 }
+
 type IRegisterProps = IRegisterPropsFromDispatch;
 
 class Register extends React.Component<IRegisterProps, IRegisterState> {
@@ -55,6 +58,7 @@ class Register extends React.Component<IRegisterProps, IRegisterState> {
 			gender: GenderType.Male,
 		}
 	}
+
 	render() {
 		const {
 			email, password, fName, confirmPassword, errMsg, confirmPasswordErrMsg,
@@ -62,7 +66,7 @@ class Register extends React.Component<IRegisterProps, IRegisterState> {
 		} = this.state;
 		return (
 			<Paper className={`register-container`}>
-				<img src='/crolab_logo.png' alt='crolab_logo' />
+				<img src='/crolab_logo.png' alt='crolab_logo'/>
 				<h1>Đăng ký</h1>
 				<TextField
 					className={`tf-normal`}
@@ -99,7 +103,7 @@ class Register extends React.Component<IRegisterProps, IRegisterState> {
 					variant="outlined"
 				/>
 				<Stack direction={"row"} spacing={2}>
-					<FormControl sx={{ flexGrow: 1 }}>
+					<FormControl sx={{flexGrow: 1}}>
 						<InputLabel id="slt-role">Vai trò</InputLabel>
 						<Select
 							labelId="slt-role"
@@ -116,7 +120,7 @@ class Register extends React.Component<IRegisterProps, IRegisterState> {
 							<MenuItem value={UserRoleType.Requester}>Requester</MenuItem>
 						</Select>
 					</FormControl>
-					<FormControl sx={{ flexGrow: 1 }}>
+					<FormControl sx={{flexGrow: 1}}>
 						<InputLabel id="slt-yob">Năm sinh</InputLabel>
 						<Select
 							labelId="slt-yob"
@@ -129,11 +133,11 @@ class Register extends React.Component<IRegisterProps, IRegisterState> {
 								})
 							}}
 						>
-							{Array.from({ length: (2020 - 1980) + 1 }, (_, i) => 1980 + i)
+							{Array.from({length: (2020 - 1980) + 1}, (_, i) => 1980 + i)
 								.map((year: number) => <MenuItem value={year}>{year}</MenuItem>)}
 						</Select>
 					</FormControl>
-					<FormControl sx={{ flexGrow: 1 }}>
+					<FormControl sx={{flexGrow: 1}}>
 						<InputLabel id="slt-gender">Giới tính</InputLabel>
 						<Select
 							labelId="slt-gender"
@@ -184,14 +188,14 @@ class Register extends React.Component<IRegisterProps, IRegisterState> {
 						})
 					}}
 				/>
-				{!!errMsg && <p style={{ color: "#d32f2f" }}>{errMsg}</p>}
+				{!!errMsg && <p style={{color: "#d32f2f"}}>{errMsg}</p>}
 				<p>
 					Đã có tài khoản? <span
-						onClick={() => {
-							history.push("/login");
-						}}
-						className={`sp-login-hyperlink`}
-					>
+					onClick={() => {
+						history.push("/login");
+					}}
+					className={`sp-login-hyperlink`}
+				>
 						Đăng nhập
 					</span>
 				</p>
@@ -200,7 +204,7 @@ class Register extends React.Component<IRegisterProps, IRegisterState> {
 					variant="contained"
 					onClick={() => {
 						if (password !== confirmPassword) {
-							this.setState({ confirmPasswordErrMsg: "Mật khẩu không trùng khớp, vui lòng kiểm tra lại!" })
+							this.setState({confirmPasswordErrMsg: "Mật khẩu không trùng khớp, vui lòng kiểm tra lại!"})
 						} else {
 							this.props.showTopLoading!();
 							userAPI.register(email, fName, password).then((res: any) => {
@@ -209,18 +213,19 @@ class Register extends React.Component<IRegisterProps, IRegisterState> {
 									history.push("/login");
 									this.props.showSnackBar!("Chúc mừng! Bạn đã đăng ký thành công", 10000, SnackBarType.Success);
 								} else {
-									this.setState({ errMsg: res.data.message });
+									this.setState({errMsg: res.data.message});
 								}
 							}).catch((err: any) => {
-								this.setState({ errMsg: err.message })
+								this.setState({errMsg: err.message})
 							}).finally(() => this.props.hideTopLoading!())
 						}
 					}}
 				>
 					Đăng ký tài khoản
 				</Button>
-			</Paper >
+			</Paper>
 		)
 	}
 }
+
 export default connect(null, mapDispatcherToProps)(Register);
