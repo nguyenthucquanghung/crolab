@@ -23,9 +23,9 @@ class UserLoginSerializer(serializers.Serializer):
 class JobSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
-        if data['truth_qty'] != 10 and data['truth_qty'] != 20:
+        if data['truth_qty'] != 2 and data['truth_qty'] != 10 and data['truth_qty'] != 20:
             raise serializers.ValidationError({'truth_qty': 'Must be 10 or 20'})
-        if data['shared_qty'] != 10 and data['shared_qty'] != 20:
+        if data['truth_qty'] != 2 and data['shared_qty'] != 10 and data['shared_qty'] != 20:
             raise serializers.ValidationError({'shared_qty': 'Must be 10 or 20'})
         if data['truth_qty'] + data['shared_qty'] >= data['min_qty']:
             raise serializers.ValidationError({'min_qty': 'Must be higher than total of truth_qty and shared_qty'})

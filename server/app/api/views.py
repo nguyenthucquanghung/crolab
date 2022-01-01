@@ -126,20 +126,24 @@ class JobViewSet(viewsets.ModelViewSet):
             serializer = self.serializer_class(data=request.data)
             if serializer.is_valid():
                 user = User.objects.filter(email=request.user).first()
-                job = serializer.save(requester=user.id, unit_qty=len(file_names))
+                job = serializer.save(
+                    requester=user.id, unit_qty=len(file_names))
                 units = []
                 for filename in file_names:
                     units.append(Unit(job=job.id, data=filename))
                 Unit.objects.bulk_create(units)
 
                 # Create truth and shared unit
-                units = Unit.objects.filter(job=job.id).order_by('?')[:job.truth_qty + job.shared_qty]
+                units = Unit.objects.filter(job=job.id).order_by('?')[
+                    :job.truth_qty + job.shared_qty]
                 truth_units = []
                 shared_units = []
                 for i in range(0, job.truth_qty):
-                    truth_units.append(TruthUnit(job=job.id, data=units[i].data))
+                    truth_units.append(
+                        TruthUnit(job=job.id, data=units[i].data))
                 for i in range(job.truth_qty, job.truth_qty + job.shared_qty):
-                    shared_units.append(SharedUnit(job=job.id, data=units[i].data))
+                    shared_units.append(SharedUnit(
+                        job=job.id, data=units[i].data))
                 TruthUnit.objects.bulk_create(truth_units)
                 SharedUnit.objects.bulk_create(shared_units)
 
@@ -185,7 +189,8 @@ class JobViewSet(viewsets.ModelViewSet):
     @auth
     def list_owned_job(self, request):
         user = User.objects.filter(email=request.user).first()
-        query_set = self.queryset.filter(requester=user.id).order_by('-updated_at')
+        query_set = self.queryset.filter(
+            requester=user.id).order_by('-updated_at')
         paginator = PageNumberPagination()
         jobs = paginator.paginate_queryset(query_set, request)
         result = []
@@ -260,39 +265,42 @@ class JobViewSet(viewsets.ModelViewSet):
     @is_job_requester
     def truth_unit(self, request, pk=None):
         if request.method == 'GET':
-            unlabeled_truth_units = TruthUnit.objects.filter(job=pk, label=None)
+            job = self.queryset.filter(pk=pk).first()
+            unlabeled_truth_units = TruthUnit.objects.filter(
+                job=pk, label=None)
             unit_data = []
             for truth_unit in unlabeled_truth_units:
                 unit_data.append(truth_unit.to_dict())
             return Response({
-                'truth_unit': unit_data
+                'truth_unit': unit_data,
+                'job': job.to_dict()
             }, status.HTTP_200_OK)
         if request.method == 'PUT':
-            unit_id = request.data.get('truth_unit_id', None)
-            if unit_id is None:
-                return Response({
-                    'errors': 'truth_unit_id is required'
-                }, status.HTTP_400_BAD_REQUEST)
-            label = request.data.get('label', None)
-            if label is None:
-                return Response({
-                    'errors': 'label is required'
-                }, status.HTTP_400_BAD_REQUEST)
-            truth_unit = TruthUnit.objects.filter(job=pk, pk=unit_id).first()
-            if truth_unit is None:
-                return Response({
-                    'errors': 'Truth Unit not found'
-                }, status.HTTP_404_NOT_FOUND)
-            truth_unit.label = label
-            truth_unit.save()
+            truth_units = request.data.get('truth_units', None)
+            for truth_unit in truth_units:
+                unit_id = truth_unit['truth_unit_id']
+                if unit_id is None:
+                    return Response({
+                        'errors': 'truth_unit_id is required'
+                    }, status.HTTP_400_BAD_REQUEST)
+                label = truth_unit['label']
+                if label is None:
+                    return Response({
+                        'errors': 'label is required'
+                    }, status.HTTP_400_BAD_REQUEST)
+                truth_unit = TruthUnit.objects.filter(
+                    job=pk, pk=unit_id).first()
+                if truth_unit is None:
+                    return Response({
+                        'errors': 'Truth Unit not found'
+                    }, status.HTTP_404_NOT_FOUND)
+                truth_unit.label = label
+                truth_unit.save()
 
-            # Check if job ready for apply
-            count = TruthUnit.objects.filter(job=pk, label=None).count()
-            if count == 0:
-                job = Job.objects.filter(pk=pk).first()
-                job.truth_qty_ready = True
-                job.save()
-            return Response(truth_unit.to_dict(), status.HTTP_201_CREATED)
+            job = Job.objects.filter(pk=pk).first()
+            job.truth_qty_ready = True
+            job.save()
+            return Response(job.to_dict(), status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['GET'])
     @is_job_requester
@@ -335,7 +343,8 @@ class TaskViewSet(viewsets.ModelViewSet):
             user = User.objects.filter(email=request.user).first()
             if job.requester == user.id:
                 return Response({}, status.HTTP_403_FORBIDDEN)
-            task = Task.objects.create(job=job.id, annotator=user.id, unit_qty=unit_qty)
+            task = Task.objects.create(
+                job=job.id, annotator=user.id, unit_qty=unit_qty)
             return Response(task.to_dict(), status.HTTP_201_CREATED)
         else:
             return Response({
@@ -377,22 +386,26 @@ class TaskViewSet(viewsets.ModelViewSet):
         # Clone truth unit
         truth_units = TruthUnit.objects.filter(job=job.id)
         for truth_unit in truth_units:
-            unit = Unit.objects.create(job=job.id, task=task.id, data=truth_unit.data, assigned=True)
-            truth_label = TruthLabel.objects.create(truth_unit=truth_unit.id, task=task.id, unit=unit.id, accuracy=0)
+            unit = Unit.objects.create(
+                job=job.id, task=task.id, data=truth_unit.data, assigned=True)
+            truth_label = TruthLabel.objects.create(
+                truth_unit=truth_unit.id, task=task.id, unit=unit.id, accuracy=0)
             unit.truth_id = truth_label.id
             unit.save()
 
         # Clone shared unit
         shared_units = SharedUnit.objects.filter(job=job.id)
         for shared_unit in shared_units:
-            unit = Unit.objects.create(job=job.id, task=task.id, data=shared_unit.data, assigned=True)
+            unit = Unit.objects.create(
+                job=job.id, task=task.id, data=shared_unit.data, assigned=True)
             shared_label = SharedLabel.objects.create(shared_unit=shared_unit.id, task=task.id, unit=unit.id,
                                                       accuracy=0)
             unit.shared_id = shared_label.id
             unit.save()
 
         # assign normal unit
-        units = Unit.objects.filter(job=job.id, assigned=False)[:(task.unit_qty-shared_units.count()-truth_units.count())]
+        units = Unit.objects.filter(job=job.id, assigned=False)[:(
+            task.unit_qty-shared_units.count()-truth_units.count())]
         for unit in units:
             unit.task = task.id
             unit.assigned = True
@@ -481,7 +494,9 @@ class TaskViewSet(viewsets.ModelViewSet):
         added_total_truth = 0
         for truth_label in truth_labels:
             added_total_truth += truth_label.accuracy
-        user.mean_truth_accuracy = user.mean_truth_accuracy * (user.truth_label_c / new_truth_count) + float(added_total_truth) / new_truth_count
+        user.mean_truth_accuracy = user.mean_truth_accuracy * \
+            (user.truth_label_c / new_truth_count) + \
+            float(added_total_truth) / new_truth_count
         user.truth_label_c = new_truth_count
 
         # Calculate shared accuracy
@@ -489,7 +504,9 @@ class TaskViewSet(viewsets.ModelViewSet):
         added_total_shared = 0
         for shared_label in shared_labels:
             added_total_shared += shared_label.accuracy
-        user.mean_shared_accuracy = user.mean_shared_accuracy * (user.shared_label_c / new_shared_count) + float(added_total_shared) / new_shared_count
+        user.mean_shared_accuracy = user.mean_shared_accuracy * \
+            (user.shared_label_c / new_shared_count) + \
+            float(added_total_shared) / new_shared_count
         user.shared_label_c = new_shared_count
 
         user.save()
@@ -550,27 +567,35 @@ class TaskViewSet(viewsets.ModelViewSet):
         for item in items:
             if item.truth_id is not None:
                 is_has_truth_label = True
-                truth_label = TruthLabel.objects.filter(pk=item.truth_id).first()
+                truth_label = TruthLabel.objects.filter(
+                    pk=item.truth_id).first()
                 truth_label.label = item.label
-                truth_unit = TruthUnit.objects.filter(pk=truth_label.truth_unit).first()
-                truth_label.accuracy = validate_string_label(truth_label.label, truth_unit.label)
+                truth_unit = TruthUnit.objects.filter(
+                    pk=truth_label.truth_unit).first()
+                truth_label.accuracy = validate_string_label(
+                    truth_label.label, truth_unit.label)
                 truth_label.save()
             if item.shared_id is not None:
                 is_has_shared_label = True
-                shared_label = SharedLabel.objects.filter(pk=item.shared_id).first()
+                shared_label = SharedLabel.objects.filter(
+                    pk=item.shared_id).first()
                 shared_label.label = item.label
                 shared_label.save()
                 total_accuracy = 0
-                shared_labels = SharedLabel.objects.filter(shared_unit=shared_label.shared_unit).exclude(label=None)
+                shared_labels = SharedLabel.objects.filter(
+                    shared_unit=shared_label.shared_unit).exclude(label=None)
                 count_shared_label = shared_labels.count()
                 for i in shared_labels:
-                    total_accuracy += validate_string_label(shared_label.label, i.label)
-                shared_label.accuracy = int(total_accuracy / count_shared_label)
+                    total_accuracy += validate_string_label(
+                        shared_label.label, i.label)
+                shared_label.accuracy = int(
+                    total_accuracy / count_shared_label)
                 shared_label.save()
 
         if is_has_truth_label:
             # Calculate task's truth accuracy
-            truth_labels = TruthLabel.objects.filter(task=pk).exclude(label=None)
+            truth_labels = TruthLabel.objects.filter(
+                task=pk).exclude(label=None)
             total_truth_score = 0
             for truth_label in truth_labels:
                 total_truth_score += truth_label.accuracy
@@ -578,7 +603,8 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         if is_has_shared_label:
             # Calculate task's shared accuracy
-            shared_labels = SharedLabel.objects.filter(task=pk).exclude(label=None)
+            shared_labels = SharedLabel.objects.filter(
+                task=pk).exclude(label=None)
             total_shared_score = 0
             for shared_label in shared_labels:
                 total_shared_score += shared_label.accuracy
@@ -634,7 +660,8 @@ class RateViewSet(viewsets.ModelViewSet):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             user = User.objects.filter(email=request.user).first()
-            rate = Rating.objects.filter(task=request.data['task'], rater=user.id).first()
+            rate = Rating.objects.filter(
+                task=request.data['task'], rater=user.id).first()
             if rate is not None:
                 return Response({
                     'errors': 'You already rated this task'
@@ -656,7 +683,9 @@ class RateViewSet(viewsets.ModelViewSet):
             # Update user rating
             ratee = User.objects.filter(pk=rate.ratee).first()
             new_rate_count = 1 + ratee.rate_c
-            ratee.rating = ratee.rating * (user.rate_c / new_rate_count) + float(rate.rating) / new_rate_count
+            ratee.rating = ratee.rating * \
+                (user.rate_c / new_rate_count) + \
+                float(rate.rating) / new_rate_count
             ratee.rate_c = new_rate_count
             ratee.save()
             return Response(rate.to_dict(), status.HTTP_201_CREATED)

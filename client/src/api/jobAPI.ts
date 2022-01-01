@@ -54,6 +54,24 @@ class JobAPI {
             }
         );
     };
+
+    getUnlabeledTruthUnits = (jobId: number) => {
+        const url = `/job/${jobId}/truth_unit/`;
+        return API.get(url);
+    }
+
+    reqAnnotateTruthUnits = (
+        jobId: number,
+        truthUnits: { id: number; label: string }[]
+    ) => {
+        const url = `/job/${jobId}/truth_unit/`;
+        const body = {
+            truth_units: truthUnits.map(unit => {
+                return { truth_unit_id: unit.id, label: unit.label }
+            }),
+        };
+        return API.put(url, body);
+    }
 }
 
 const jobAPI = new JobAPI();
