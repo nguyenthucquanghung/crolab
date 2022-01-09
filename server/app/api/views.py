@@ -18,6 +18,7 @@ import uuid
 from azure.storage.blob import BlockBlobService
 from azure.storage.blob.models import ContentSettings
 import datetime
+import pyrebase
 
 ACCOUNT_NAME = os.environ.get('ACCOUNT_NAME')
 ACCOUNT_KEY = os.environ.get('ACCOUNT_KEY')
@@ -25,8 +26,22 @@ MEDIA_CONTAINER = os.environ.get('MEDIA_CONTAINER')
 STATIC_CONTAINER = os.environ.get('STATIC_CONTAINER')
 
 
-# Create your views here.
+firebaseConfig = {
+    "apiKey": "AIzaSyCGBjUEarrSOFlh558JmXQGt2v6Wcmm3uU",
+    "authDomain": "crolab-hust.firebaseapp.com",
+    "projectId": "crolab-hust",
+    "storageBucket": "crolab-hust.appspot.com",
+    "messagingSenderId": "385781141419",
+    "appId": "1:385781141419:web:faf050eaffa86ca2b48cee",
+    "measurementId": "G-CBP03336HP",
+    "databaseURL": "https://crolab-hust-default-rtdb.asia-southeast1.firebasedatabase.app/"
+}
+firebase = pyrebase.initialize_app(firebaseConfig)
+authe = firebase.auth()
+realtime_db = firebase.database()
 
+
+# Create your views here.
 
 class UserRegisterView(APIView):
     @staticmethod
@@ -297,9 +312,16 @@ class JobViewSet(viewsets.ModelViewSet):
                 truth_unit.label = label
                 truth_unit.save()
 
+            count_unlabeled_truth_unit = TruthUnit.objects.filter(job=pk, label=None).count()
             job = Job.objects.filter(pk=pk).first()
-            job.truth_qty_ready = True
-            job.save()
+            if count_unlabeled_truth_unit == 0:
+                job.truth_qty_ready = True
+                job.save()
+                # TODO: not push data if all unit done
+                job_data = job.to_dict()
+                job_data['created_at'] = str(job_data['created_at'])
+                job_data['updated_at'] = str(job_data['updated_at'])
+                realtime_db.child('data').child('job').update({job.id: job_data})
             return Response(job.to_dict(), status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['GET'])
@@ -345,6 +367,13 @@ class TaskViewSet(viewsets.ModelViewSet):
                 return Response({}, status.HTTP_403_FORBIDDEN)
             task = Task.objects.create(
                 job=job.id, annotator=user.id, unit_qty=unit_qty)
+            timestamp = str(int(datetime.datetime.timestamp(datetime.datetime.now())*1000))
+            task_data = task.to_dict_for_fire_base()
+
+            realtime_db.child('data').child('requester_noti').child(job.requester).update({timestamp: {
+                'title': 'New Task Created',
+                'detail': task_data
+            }})
             return Response(task.to_dict(), status.HTTP_201_CREATED)
         else:
             return Response({
@@ -411,6 +440,14 @@ class TaskViewSet(viewsets.ModelViewSet):
             unit.assigned = True
             unit.save()
 
+        # push noti
+        timestamp = str(int(datetime.datetime.timestamp(datetime.datetime.now()) * 1000))
+        task_data = task.to_dict_for_fire_base()
+        realtime_db.child('data').child('annotator_noti').child(task.annotator).update({timestamp: {
+            'title': 'Task Accepted',
+            'detail': task_data
+        }})
+
         return Response(task.to_dict(), status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['PUT'])
@@ -424,7 +461,7 @@ class TaskViewSet(viewsets.ModelViewSet):
             }, status.HTTP_400_BAD_REQUEST)
         if task.passed:
             return Response({
-                'errors': 'Task already passed'
+                'errors': 'Task already passesetd'
             }, status.HTTP_400_BAD_REQUEST)
         if not task.is_submitted:
             # TODO: check deadline
@@ -457,11 +494,20 @@ class TaskViewSet(viewsets.ModelViewSet):
             TruthLabel.objects.filter(task=task.id).delete()
         task.rejected = True
         task.save()
+
+        # push noti
+        timestamp = str(int(datetime.datetime.timestamp(datetime.datetime.now()) * 1000))
+        task_data = task.to_dict_for_fire_base()
+        realtime_db.child('data').child('annotator_noti').child(task.annotator).update({timestamp: {
+            'title': 'Task Rejected',
+            'detail': task_data
+        }})
         return Response(task.to_dict(), status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['PUT'])
     @is_task_requester
     def set_task_passed(self, request, pk=None):
+        # TODO: remove from realtime_db if all unit done
         task = self.queryset.filter(pk=pk).first()
         if not task.accepted:
             return Response({
@@ -481,6 +527,14 @@ class TaskViewSet(viewsets.ModelViewSet):
             }, status.HTTP_400_BAD_REQUEST)
         task.passed = True
         task.save()
+
+        # push noti
+        timestamp = str(int(datetime.datetime.timestamp(datetime.datetime.now()) * 1000))
+        task_data = task.to_dict_for_fire_base()
+        realtime_db.child('data').child('annotator_noti').child(task.annotator).update({timestamp: {
+            'title': 'Task Passed',
+            'detail': task_data
+        }})
 
         # Update user profile
         user = User.objects.filter(pk=task.annotator).first()

@@ -194,6 +194,14 @@ class Task(models.Model):
         result['truth_accuracy'] = self.truth_accuracy
         return result
 
+    def to_dict_for_fire_base(self):
+        task_data = self.to_dict()
+        task_data['created_at'] = str(task_data['created_at'])
+        task_data['accepted_at'] = str(task_data['accepted_at'])
+        task_data['annotator']['created_at'] = str(task_data['annotator']['created_at'])
+        task_data['annotator']['updated_at'] = str(task_data['annotator']['updated_at'])
+        return task_data
+
 
 class Unit(models.Model):
     job = models.IntegerField()

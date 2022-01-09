@@ -1,6 +1,6 @@
 from django.urls import path
 from django.urls.conf import include
-from .views import  UserRegisterView, UserLoginView, JobViewSet, CommentViewSet, TaskViewSet, RateViewSet
+from .views import UserRegisterView, UserLoginView, JobViewSet, CommentViewSet, TaskViewSet, RateViewSet
 from rest_framework import routers
 
 
