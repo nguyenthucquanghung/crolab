@@ -27,14 +27,14 @@ STATIC_CONTAINER = os.environ.get('STATIC_CONTAINER')
 
 
 firebaseConfig = {
-    "apiKey": "AIzaSyCGBjUEarrSOFlh558JmXQGt2v6Wcmm3uU",
-    "authDomain": "crolab-hust.firebaseapp.com",
+    "apiKey": os.environ.get('FIREBASE_API_KEY'),
+    "authDomain": os.environ.get('FIREBASE_AUTH_DOMAIN'),
     "projectId": "crolab-hust",
     "storageBucket": "crolab-hust.appspot.com",
     "messagingSenderId": "385781141419",
-    "appId": "1:385781141419:web:faf050eaffa86ca2b48cee",
+    "appId": os.environ.get('FIREBASE_APP_ID'),
     "measurementId": "G-CBP03336HP",
-    "databaseURL": "https://crolab-hust-default-rtdb.asia-southeast1.firebasedatabase.app/"
+    "databaseURL": os.environ.get('FIREBASE_DB_URL')
 }
 firebase = pyrebase.initialize_app(firebaseConfig)
 authe = firebase.auth()
