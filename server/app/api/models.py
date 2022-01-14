@@ -47,6 +47,7 @@ class User(AbstractUser):
             'created_at': self.created_at,
             'updated_at': self.updated_at,
             'rating': self.rating,
+            'rate_c': self.rate_c,
             'mean_truth_accuracy': self.mean_truth_accuracy,
             'mean_shared_accuracy': self.mean_shared_accuracy,
             'label_c': self.label_c,

@@ -747,3 +747,35 @@ class RateViewSet(viewsets.ModelViewSet):
             return JsonResponse({
                 'errors': serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
+
+    @auth
+    @action(detail=False, methods=['GET'])
+    def annotator(self, request):
+        query_set = User.objects.filter(role=UserRole.ANNOTATOR, rate_c__gt=0).order_by('-rating')
+        paginator = PageNumberPagination()
+        users = paginator.paginate_queryset(query_set, request)
+        result = []
+        for user in users:
+            result.append(user.to_dict())
+        return Response({
+            'total': query_set.count(),
+            'prev': paginator.get_previous_link(),
+            'next': paginator.get_next_link(),
+            'results': result
+        }, status.HTTP_200_OK)
+
+    @auth
+    @action(detail=False, methods=['GET'])
+    def requester(self, request):
+        query_set = User.objects.filter(role=UserRole.REQUESTER, rate_c__gt=0).order_by('-rating')
+        paginator = PageNumberPagination()
+        users = paginator.paginate_queryset(query_set, request)
+        result = []
+        for user in users:
+            result.append(user.to_dict())
+        return Response({
+            'total': query_set.count(),
+            'prev': paginator.get_previous_link(),
+            'next': paginator.get_next_link(),
+            'results': result
+        }, status.HTTP_200_OK)
