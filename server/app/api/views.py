@@ -58,7 +58,7 @@ class UserRegisterView(APIView):
 
         else:
             return JsonResponse({
-                'message': 'This email has already exist!'
+                'details': serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -103,6 +103,50 @@ class UserLogoutView(APIView):
         return Response({
             'message': 'Logout successfully!'
         }, status=status.HTTP_200_OK)
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    pagination_class = PageNumberPagination
+
+    @is_admin
+    def list(self, request):
+        query_set = self.queryset
+        paginator = PageNumberPagination()
+        users = paginator.paginate_queryset(query_set, request)
+        result = []
+        for user in users:
+            result.append(user.to_dict())
+        return Response({
+            'total': query_set.count(),
+            'prev': paginator.get_previous_link(),
+            'next': paginator.get_next_link(),
+            'results': result
+        }, status.HTTP_200_OK)
+
+    @is_admin
+    def retrieve(self, request, pk):
+        user = self.queryset.filter(pk=pk).first()
+        if user is None:
+            return Response({}, status.HTTP_404_NOT_FOUND)
+        return Response(user.to_dict(), status.HTTP_200_OK)
+
+    @is_admin
+    def update(self, request, pk):
+        user = self.queryset.filter(pk=pk).first()
+        if user is None:
+            return Response({}, status.HTTP_404_NOT_FOUND)
+        update_model(user, request.data, ['gender', 'full_name'])
+        return Response(user.to_dict(), status.HTTP_201_CREATED)
+
+    @is_admin
+    def delete(self, request, pk):
+        user = self.queryset.filter(pk=pk).first()
+        if user is None:
+            return Response({}, status.HTTP_404_NOT_FOUND)
+        user.delete()
+        return Response({}, 204)
 
 
 class JobViewSet(viewsets.ModelViewSet):
@@ -181,11 +225,15 @@ class JobViewSet(viewsets.ModelViewSet):
                 'errors': str(e)
             }, status.HTTP_503_SERVICE_UNAVAILABLE)
 
-    # List available jobs for applying
+    # List available jobs for applying || list all job for admin
     @auth
     def list(self, request):
-        query_set = self.queryset.filter(unit_qty__gt=models.F('accepted_qty'), truth_qty_ready=True) \
-            .order_by('-updated_at')
+        user = User.objects.filter(email=request.user).first()
+        if user.role == UserRole.ADMIN:
+            query_set = self.queryset
+        else:
+            query_set = self.queryset.filter(unit_qty__gt=models.F('accepted_qty'), truth_qty_ready=True) \
+                .order_by('-updated_at')
 
         paginator = PageNumberPagination()
         jobs = paginator.paginate_queryset(query_set, request)
@@ -227,7 +275,7 @@ class JobViewSet(viewsets.ModelViewSet):
             }, status.HTTP_400_BAD_REQUEST)
         return Response(job.to_dict(), status.HTTP_200_OK)
 
-    @is_job_requester
+    @is_job_requester_or_admin
     def update(self, request, pk=None):
         try:
             job = Job.objects.filter(pk=pk).first()
@@ -335,6 +383,25 @@ class JobViewSet(viewsets.ModelViewSet):
             'tasks': task_data
         }, status.HTTP_200_OK)
 
+    @is_admin
+    def delete(self, request, pk):
+        job = self.queryset.filter(pk=pk).first()
+        if job is None:
+            return Response({}, status.HTTP_404_NOT_FOUND)
+        job.delete()
+        Comment.objects.filter(job=pk).delete()
+        Task.objects.filter(job=pk).delete()
+        Unit.objects.filter(job=pk).delete()
+        truth_units = TruthUnit.objects.filter(job=pk)
+        for truth_unit in truth_units:
+            TruthLabel.objects.filter(truth_unit=truth_unit.pk).delete()
+        truth_units.delete()
+        shared_units = SharedLabel.objects.filter(job=pk)
+        for shared_unit in shared_units:
+            SharedLabel.objects.filter(shared_unit=shared_unit).delete()
+        shared_units.delete()
+        return Response({}, 204)
+
 
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
@@ -350,6 +417,14 @@ class CommentViewSet(viewsets.ModelViewSet):
         return Response({
             'errors': serializer.errors
         }, status.HTTP_400_BAD_REQUEST)
+
+    @is_admin
+    def delete(self, request, pk):
+        comment = self.queryset.filter(pk=pk).first()
+        if comment is None:
+            return Response({}, status.HTTP_404_NOT_FOUND)
+        comment.delete()
+        return Response({}, 204)
 
 
 class TaskViewSet(viewsets.ModelViewSet):
