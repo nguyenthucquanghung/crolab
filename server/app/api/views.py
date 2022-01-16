@@ -225,6 +225,22 @@ class JobViewSet(viewsets.ModelViewSet):
                 'errors': str(e)
             }, status.HTTP_503_SERVICE_UNAVAILABLE)
 
+    @action(detail=True, methods=['POST'])
+    @is_job_requester
+    def label_type(self, request, pk=None):
+        label_types = request.data.get('label_types', None)
+        if label_types is None:
+            return Response({'errors': {'label_types': 'This field is required.'}}, status.HTTP_400_BAD_REQUEST)
+        objs = []
+        for label_type in label_types:
+            name = label_type.get('name', None)
+            if name is None:
+                return Response({'errors': 'each label type must have a name'}, status.HTTP_400_BAD_REQUEST)
+            description = label_type.get('description', '')
+            obj = ClassificationLabelType.objects.create(name=name, description=description, job=pk)
+            objs.append(obj.to_dict())
+        return Response({'results': objs}, status.HTTP_201_CREATED)
+
     # List available jobs for applying || list all job for admin
     @auth
     def list(self, request):
@@ -350,6 +366,10 @@ class JobViewSet(viewsets.ModelViewSet):
                 if label is None:
                     return Response({
                         'errors': 'label is required'
+                    }, status.HTTP_400_BAD_REQUEST)
+                if not check_valid_label(pk, label):
+                    return Response({
+                        'errors': 'Invalid label type'
                     }, status.HTTP_400_BAD_REQUEST)
                 truth_unit = TruthUnit.objects.filter(
                     job=pk, pk=unit_id).first()
@@ -683,6 +703,10 @@ class TaskViewSet(viewsets.ModelViewSet):
             if unit.get('label') is None:
                 return Response({
                     'errors': 'label should not be None'
+                }, status.HTTP_400_BAD_REQUEST)
+            if not check_valid_label(task.job, unit['label']):
+                return Response({
+                    'errors': 'Invalid label type'
                 }, status.HTTP_400_BAD_REQUEST)
             if item.task != task.id:
                 return Response({

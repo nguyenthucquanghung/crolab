@@ -91,6 +91,10 @@ class Job(models.Model):
         requester = User.objects.filter(pk=self.requester).first()
         if requester is not None:
             requester = requester.simple_info()
+        label_type_data = []
+        label_types = ClassificationLabelType.objects.filter(job=self.id)
+        for label_type in label_types:
+            label_type_data.append(label_type.to_dict())
         return {
             'id': self.id,
             'category': self.category,
@@ -107,6 +111,7 @@ class Job(models.Model):
             'accepted_threshold': self.accept_threshold,
             'bonus_threshold': self.bonus_threshold,
             'truth_qty_ready': self.truth_qty_ready,
+            'classification_label_type': label_type_data,
             'deadline': str(self.deadline) + ' days',
             'created_at': self.created_at,
             'updated_at': self.updated_at
