@@ -13,7 +13,7 @@ export default class Main extends React.Component {
 					history.push("/requester/jobmanagement");
 					return;
 				case UserRoleType.Annotator:
-					history.push("/annotator/jobmanagement");
+					history.push("/annotator/dashboard");
 					return;
 				case UserRoleType.Admin:
 					history.push("/admin/jobmanagement");

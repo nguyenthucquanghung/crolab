@@ -88,8 +88,44 @@ class Job(models.Model):
 
     def to_dict(self):
         requester = User.objects.filter(pk=self.requester).first()
+        truth_units = TruthUnit.objects.filter(job=self.id).all()
+        truth_units_data = []
+        for truth_unit in truth_units:
+            truth_units_data.append(truth_unit.to_dict())
+
+        tasks = Task.objects.filter(job=self.id).all()
+        tasks_data = []
+        for task in tasks:
+            tasks_data.append(task.to_dict())
         if requester is not None:
-            requester = requester.simple_info()
+            requester = requester.to_dict()
+        return {
+            'id': self.id,
+            'category': self.category,
+            'name': self.name,
+            'description': self.description,
+            'requester': requester,
+            'unit_qty': self.unit_qty,
+            'truth_qty': self.truth_qty,
+            'shared_qty': self.shared_qty,
+            'min_qty': self.min_qty,
+            'accepted_qty': self.accepted_qty,
+            'unit_wage': self.unit_wage,
+            'unit_bonus': self.unit_bonus,
+            'accepted_threshold': self.accept_threshold,
+            'bonus_threshold': self.bonus_threshold,
+            'truth_qty_ready': self.truth_qty_ready,
+            'deadline': str(self.deadline) + ' days',
+            'truth_units': truth_units_data,
+            'tasks': tasks_data,
+            'created_at': self.created_at,
+            'updated_at': self.updated_at
+        }
+
+    def to_dict_for_annotator(self):
+        requester = User.objects.filter(pk=self.requester).first()
+        if requester is not None:
+            requester = requester.to_dict()
         return {
             'id': self.id,
             'category': self.category,
@@ -168,9 +204,13 @@ class Task(models.Model):
 
     class Meta:
         db_table = 'task'
+        ordering = ['id']
 
     def to_dict(self):
         annotator = User.objects.filter(pk=self.annotator).first()
+        job = Job.objects.filter(pk=self.job).first()
+        if job is not None:
+            job = job.to_dict_for_annotator()
         if annotator is not None:
             annotator = annotator.to_dict()
         units = Unit.objects.filter(task=self.id)
@@ -185,7 +225,10 @@ class Task(models.Model):
             'rejected': self.rejected,
             'is_submitted': self.is_submitted,
             'created_at': self.created_at,
-            'accepted_at': self.accepted_at
+            'accepted_at': self.accepted_at,
+            'shared_accuracy': self.shared_accuracy,
+            'truth_accuracy': self.truth_accuracy,
+            'job': job,
         }
 
     def to_dict_for_requester(self):
@@ -272,7 +315,7 @@ class Rank(models.Model):
     user = models.IntegerField()
     rank_category = models.SmallIntegerField(RankCategory.choices)
     offset = models.IntegerField()
-    
+
     class Meta:
         db_table = 'rank'
 

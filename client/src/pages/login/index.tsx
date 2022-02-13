@@ -33,7 +33,8 @@ interface ILoginState {
 	errMsg: string;
 }
 
-class Login extends React.Component<ILoginProps, ILoginState> {
+@(connect(null, mapDispatcherToProps) as any)
+export default class Login extends React.Component<ILoginProps, ILoginState> {
 	constructor(props: {}) {
 		super(props);
 		this.state = {
@@ -156,7 +157,7 @@ class Login extends React.Component<ILoginProps, ILoginState> {
 											history.push("/requester/jobmanagement");
 											return;
 										case UserRoleType.Annotator:
-											history.push("/annotator/jobmanagement");
+											history.push("/annotator/dashboard");
 											return;
 										case UserRoleType.Admin:
 											history.push("/admin/jobmanagement");
@@ -208,5 +209,3 @@ class Login extends React.Component<ILoginProps, ILoginState> {
 		)
 	}
 }
-
-export default connect(null, mapDispatcherToProps)(Login);

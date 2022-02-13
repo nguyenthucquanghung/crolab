@@ -18,7 +18,7 @@ import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
 import ReportIcon from '@mui/icons-material/Report';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
-const StyledTableCell = styled(TableCell)(({ theme }) => ({
+export const StyledTableCell = styled(TableCell)(({ theme }) => ({
 	[`&.${tableCellClasses.head}`]: {
 		backgroundColor: "#1976d2",
 		color: theme.palette.common.white,
@@ -28,7 +28,7 @@ const StyledTableCell = styled(TableCell)(({ theme }) => ({
 	},
 }));
 
-const StyledTableRow = styled(TableRow)(({ theme }) => ({
+export const StyledTableRow = styled(TableRow)(({ theme }) => ({
 	'&:nth-of-type(odd)': {
 		backgroundColor: theme.palette.action.hover,
 	},
@@ -106,28 +106,28 @@ export default class JobManagement extends React.Component<{}, IJobManagementSta
 								</StyledTableRow>
 							</TableHead>
 							<TableBody>
-								{this.state.jobList.map((row) => (
+								{this.state.jobList.slice(0).reverse().map((row) => (
 									<StyledTableRow
 										key={row.name}
 										sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
 									>
 										<StyledTableCell >{row.id}</StyledTableCell>
-										<StyledTableCell align="center" component="th" scope="row">
+										<StyledTableCell component="th" scope="row">
 											<Link
-												href={`/job/${row.id}`}
+												href={row.truth_qty_ready?`/requester/job/${row.id}`:`/requester/job/${row.id}/annotatetruth/`}
 												sx={{ cursor: "pointer" }}
 											>
 												{row.name}
 											</Link>
 										</StyledTableCell>
-										<StyledTableCell align="center">{row.description}</StyledTableCell>
+										<StyledTableCell >{row.description}</StyledTableCell>
 										<StyledTableCell align="center">{`${row.accepted_qty}/${row.unit_qty}`}</StyledTableCell>
 										<StyledTableCell align="center">{row.created_at.split('T')[0]}</StyledTableCell>
 										<StyledTableCell align="center">{`${row.accepted_threshold}%`}</StyledTableCell>
 										<StyledTableCell align="center">{`${row.unit_wage} VND`}</StyledTableCell>
 										<StyledTableCell align="center">{row.truth_qty_ready ?
 											<Box>
-												<CheckCircleIcon sx={{ fontSize: "1.1rem" }} color="success" /> <span>Sẵn sàng</span>
+												<CheckCircleIcon sx={{ fontSize: "1.1rem" }} color="success" /> <span style={{ verticalAlign: "top" }}>Sẵn sàng</span>
 											</Box> :
 											<Box>
 												<ReportIcon sx={{ fontSize: "1.1rem" }} color="warning" /> <span style={{ verticalAlign: "top" }} >Chưa sẵn sàng</span>

@@ -3,6 +3,7 @@ import {generalReducer} from './general/reducer';
 import {IGeneralState} from './general/types';
 import {snackBarReducer} from './snackbar/reducer';
 import {ISnackBarState} from './snackbar/types';
+import { connect } from 'react-redux'
 
 export interface IRootState {
 	general: IGeneralState;

@@ -40,7 +40,8 @@ interface ICreateJobState {
 	bonusThreshold: number;
 }
 
-class CreateJob extends React.Component<ICreateJobProps, ICreateJobState> {
+@(connect(null, mapDispatcherToProps) as any)
+export default class CreateJob extends React.Component<ICreateJobProps, ICreateJobState> {
 	constructor(props: ICreateJobProps) {
 		super(props);
 		this.state = {
@@ -117,7 +118,7 @@ class CreateJob extends React.Component<ICreateJobProps, ICreateJobState> {
 									onChange={this.onCategoryChanged}
 								>
 									<MenuItem value={CategoryType.SpeechToText.toString()}>
-										Chuyển đổi dọng nói thành văn bản
+										Chuyển đổi giọng nói thành văn bản
 									</MenuItem>
 									<MenuItem value={CategoryType.DocumentClassification.toString()}>
 										Phân loại văn bản
@@ -413,5 +414,3 @@ class CreateJob extends React.Component<ICreateJobProps, ICreateJobState> {
 		}
 	}
 }
-
-export default connect(null, mapDispatcherToProps)(CreateJob);

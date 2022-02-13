@@ -107,7 +107,7 @@ class JobViewSet(viewsets.ModelViewSet):
             file_names = []
             for _, audio_file in enumerate(file_list):
                 filename = audio_file.name
-                file_upload_name = str(uuid.uuid4()) + filename
+                file_upload_name = str(uuid.uuid4()) + '_'+ filename
                 print(file_upload_name)
                 file_names.append(file_upload_name)
                 blob_service_client = BlockBlobService(

@@ -11,8 +11,8 @@ class JobAPI {
 		return API.get(url);
 	};
 
-	getJobDetail = (id: string) => {
-		const url = `/job/${id}`;
+	getJobDetail = (id: number) => {
+		const url = `/job/${id}/`;
 		return API.get(url);
 	};
 

@@ -207,9 +207,9 @@ class Register extends React.Component<IRegisterProps, IRegisterState> {
 							this.setState({confirmPasswordErrMsg: "Mật khẩu không trùng khớp, vui lòng kiểm tra lại!"})
 						} else {
 							this.props.showTopLoading!();
-							userAPI.register(email, fName, password).then((res: any) => {
+							userAPI.register(email, fName, password, yob, gender, role).then((res: any) => {
 								console.log(res)
-								if (res.data && res.data.result && res.data.result === 201) {
+								if (res.data && res.status && res.status === 201) {
 									history.push("/login");
 									this.props.showSnackBar!("Chúc mừng! Bạn đã đăng ký thành công", 10000, SnackBarType.Success);
 								} else {
