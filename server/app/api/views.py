@@ -18,6 +18,7 @@ import uuid
 from azure.storage.blob import BlockBlobService
 from azure.storage.blob.models import ContentSettings
 import datetime
+import pyrebase
 
 ACCOUNT_NAME = os.environ.get('ACCOUNT_NAME')
 ACCOUNT_KEY = os.environ.get('ACCOUNT_KEY')
@@ -25,8 +26,22 @@ MEDIA_CONTAINER = os.environ.get('MEDIA_CONTAINER')
 STATIC_CONTAINER = os.environ.get('STATIC_CONTAINER')
 
 
-# Create your views here.
+firebaseConfig = {
+    "apiKey": os.environ.get('FIREBASE_API_KEY'),
+    "authDomain": os.environ.get('FIREBASE_AUTH_DOMAIN'),
+    "projectId": "crolab-hust",
+    "storageBucket": "crolab-hust.appspot.com",
+    "messagingSenderId": "385781141419",
+    "appId": os.environ.get('FIREBASE_APP_ID'),
+    "measurementId": "G-CBP03336HP",
+    "databaseURL": os.environ.get('FIREBASE_DB_URL')
+}
+firebase = pyrebase.initialize_app(firebaseConfig)
+authe = firebase.auth()
+realtime_db = firebase.database()
 
+
+# Create your views here.
 
 class UserRegisterView(APIView):
     @staticmethod
@@ -43,7 +58,7 @@ class UserRegisterView(APIView):
 
         else:
             return JsonResponse({
-                'message': 'This email has already exist!'
+                'details': serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -88,6 +103,50 @@ class UserLogoutView(APIView):
         return Response({
             'message': 'Logout successfully!'
         }, status=status.HTTP_200_OK)
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    pagination_class = PageNumberPagination
+
+    @is_admin
+    def list(self, request):
+        query_set = self.queryset
+        paginator = PageNumberPagination()
+        users = paginator.paginate_queryset(query_set, request)
+        result = []
+        for user in users:
+            result.append(user.to_dict())
+        return Response({
+            'total': query_set.count(),
+            'prev': paginator.get_previous_link(),
+            'next': paginator.get_next_link(),
+            'results': result
+        }, status.HTTP_200_OK)
+
+    @is_admin
+    def retrieve(self, request, pk):
+        user = self.queryset.filter(pk=pk).first()
+        if user is None:
+            return Response({}, status.HTTP_404_NOT_FOUND)
+        return Response(user.to_dict(), status.HTTP_200_OK)
+
+    @is_admin
+    def update(self, request, pk):
+        user = self.queryset.filter(pk=pk).first()
+        if user is None:
+            return Response({}, status.HTTP_404_NOT_FOUND)
+        update_model(user, request.data, ['gender', 'full_name'])
+        return Response(user.to_dict(), status.HTTP_201_CREATED)
+
+    @is_admin
+    def delete(self, request, pk):
+        user = self.queryset.filter(pk=pk).first()
+        if user is None:
+            return Response({}, status.HTTP_404_NOT_FOUND)
+        user.delete()
+        return Response({}, 204)
 
 
 class JobViewSet(viewsets.ModelViewSet):
@@ -166,11 +225,31 @@ class JobViewSet(viewsets.ModelViewSet):
                 'errors': str(e)
             }, status.HTTP_503_SERVICE_UNAVAILABLE)
 
-    # List available jobs for applying
+    @action(detail=True, methods=['POST'])
+    @is_job_requester
+    def label_type(self, request, pk=None):
+        label_types = request.data.get('label_types', None)
+        if label_types is None:
+            return Response({'errors': {'label_types': 'This field is required.'}}, status.HTTP_400_BAD_REQUEST)
+        objs = []
+        for label_type in label_types:
+            name = label_type.get('name', None)
+            if name is None:
+                return Response({'errors': 'each label type must have a name'}, status.HTTP_400_BAD_REQUEST)
+            description = label_type.get('description', '')
+            obj = ClassificationLabelType.objects.create(name=name, description=description, job=pk)
+            objs.append(obj.to_dict())
+        return Response({'results': objs}, status.HTTP_201_CREATED)
+
+    # List available jobs for applying || list all job for admin
     @auth
     def list(self, request):
-        query_set = self.queryset.filter(unit_qty__gt=models.F('accepted_qty'), truth_qty_ready=True) \
-            .order_by('-updated_at')
+        user = User.objects.filter(email=request.user).first()
+        if user.role == UserRole.ADMIN:
+            query_set = self.queryset
+        else:
+            query_set = self.queryset.filter(unit_qty__gt=models.F('accepted_qty'), truth_qty_ready=True) \
+                .order_by('-updated_at')
 
         paginator = PageNumberPagination()
         jobs = paginator.paginate_queryset(query_set, request)
@@ -212,7 +291,7 @@ class JobViewSet(viewsets.ModelViewSet):
             }, status.HTTP_400_BAD_REQUEST)
         return Response(job.to_dict(), status.HTTP_200_OK)
 
-    @is_job_requester
+    @is_job_requester_or_admin
     def update(self, request, pk=None):
         try:
             job = Job.objects.filter(pk=pk).first()
@@ -288,6 +367,10 @@ class JobViewSet(viewsets.ModelViewSet):
                     return Response({
                         'errors': 'label is required'
                     }, status.HTTP_400_BAD_REQUEST)
+                if not check_valid_label(pk, label):
+                    return Response({
+                        'errors': 'Invalid label type'
+                    }, status.HTTP_400_BAD_REQUEST)
                 truth_unit = TruthUnit.objects.filter(
                     job=pk, pk=unit_id).first()
                 if truth_unit is None:
@@ -297,9 +380,16 @@ class JobViewSet(viewsets.ModelViewSet):
                 truth_unit.label = label
                 truth_unit.save()
 
+            count_unlabeled_truth_unit = TruthUnit.objects.filter(job=pk, label=None).count()
             job = Job.objects.filter(pk=pk).first()
-            job.truth_qty_ready = True
-            job.save()
+            if count_unlabeled_truth_unit == 0:
+                job.truth_qty_ready = True
+                job.save()
+                # TODO: not push data if all unit done
+                job_data = job.to_dict()
+                job_data['created_at'] = str(job_data['created_at'])
+                job_data['updated_at'] = str(job_data['updated_at'])
+                realtime_db.child('data').child('job').update({job.id: job_data})
             return Response(job.to_dict(), status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['GET'])
@@ -312,6 +402,25 @@ class JobViewSet(viewsets.ModelViewSet):
         return Response({
             'tasks': task_data
         }, status.HTTP_200_OK)
+
+    @is_admin
+    def delete(self, request, pk):
+        job = self.queryset.filter(pk=pk).first()
+        if job is None:
+            return Response({}, status.HTTP_404_NOT_FOUND)
+        job.delete()
+        Comment.objects.filter(job=pk).delete()
+        Task.objects.filter(job=pk).delete()
+        Unit.objects.filter(job=pk).delete()
+        truth_units = TruthUnit.objects.filter(job=pk)
+        for truth_unit in truth_units:
+            TruthLabel.objects.filter(truth_unit=truth_unit.pk).delete()
+        truth_units.delete()
+        shared_units = SharedLabel.objects.filter(job=pk)
+        for shared_unit in shared_units:
+            SharedLabel.objects.filter(shared_unit=shared_unit).delete()
+        shared_units.delete()
+        return Response({}, 204)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -329,6 +438,14 @@ class CommentViewSet(viewsets.ModelViewSet):
             'errors': serializer.errors
         }, status.HTTP_400_BAD_REQUEST)
 
+    @is_admin
+    def delete(self, request, pk):
+        comment = self.queryset.filter(pk=pk).first()
+        if comment is None:
+            return Response({}, status.HTTP_404_NOT_FOUND)
+        comment.delete()
+        return Response({}, 204)
+
 
 class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.all()
@@ -345,6 +462,13 @@ class TaskViewSet(viewsets.ModelViewSet):
                 return Response({}, status.HTTP_403_FORBIDDEN)
             task = Task.objects.create(
                 job=job.id, annotator=user.id, unit_qty=unit_qty)
+            timestamp = str(int(datetime.datetime.timestamp(datetime.datetime.now())*1000))
+            task_data = task.to_dict_for_fire_base()
+
+            realtime_db.child('data').child('requester_noti').child(job.requester).update({timestamp: {
+                'title': 'New Task Created',
+                'detail': task_data
+            }})
             return Response(task.to_dict(), status.HTTP_201_CREATED)
         else:
             return Response({
@@ -411,6 +535,14 @@ class TaskViewSet(viewsets.ModelViewSet):
             unit.assigned = True
             unit.save()
 
+        # push noti
+        timestamp = str(int(datetime.datetime.timestamp(datetime.datetime.now()) * 1000))
+        task_data = task.to_dict_for_fire_base()
+        realtime_db.child('data').child('annotator_noti').child(task.annotator).update({timestamp: {
+            'title': 'Task Accepted',
+            'detail': task_data
+        }})
+
         return Response(task.to_dict(), status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['PUT'])
@@ -424,7 +556,7 @@ class TaskViewSet(viewsets.ModelViewSet):
             }, status.HTTP_400_BAD_REQUEST)
         if task.passed:
             return Response({
-                'errors': 'Task already passed'
+                'errors': 'Task already passesetd'
             }, status.HTTP_400_BAD_REQUEST)
         if not task.is_submitted:
             # TODO: check deadline
@@ -457,11 +589,20 @@ class TaskViewSet(viewsets.ModelViewSet):
             TruthLabel.objects.filter(task=task.id).delete()
         task.rejected = True
         task.save()
+
+        # push noti
+        timestamp = str(int(datetime.datetime.timestamp(datetime.datetime.now()) * 1000))
+        task_data = task.to_dict_for_fire_base()
+        realtime_db.child('data').child('annotator_noti').child(task.annotator).update({timestamp: {
+            'title': 'Task Rejected',
+            'detail': task_data
+        }})
         return Response(task.to_dict(), status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['PUT'])
     @is_task_requester
     def set_task_passed(self, request, pk=None):
+        # TODO: remove from realtime_db if all unit done
         task = self.queryset.filter(pk=pk).first()
         if not task.accepted:
             return Response({
@@ -481,6 +622,14 @@ class TaskViewSet(viewsets.ModelViewSet):
             }, status.HTTP_400_BAD_REQUEST)
         task.passed = True
         task.save()
+
+        # push noti
+        timestamp = str(int(datetime.datetime.timestamp(datetime.datetime.now()) * 1000))
+        task_data = task.to_dict_for_fire_base()
+        realtime_db.child('data').child('annotator_noti').child(task.annotator).update({timestamp: {
+            'title': 'Task Passed',
+            'detail': task_data
+        }})
 
         # Update user profile
         user = User.objects.filter(pk=task.annotator).first()
@@ -554,6 +703,10 @@ class TaskViewSet(viewsets.ModelViewSet):
             if unit.get('label') is None:
                 return Response({
                     'errors': 'label should not be None'
+                }, status.HTTP_400_BAD_REQUEST)
+            if not check_valid_label(task.job, unit['label']):
+                return Response({
+                    'errors': 'Invalid label type'
                 }, status.HTTP_400_BAD_REQUEST)
             if item.task != task.id:
                 return Response({
@@ -693,3 +846,35 @@ class RateViewSet(viewsets.ModelViewSet):
             return JsonResponse({
                 'errors': serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
+
+    @auth
+    @action(detail=False, methods=['GET'])
+    def annotator(self, request):
+        query_set = User.objects.filter(role=UserRole.ANNOTATOR, rate_c__gt=0).order_by('-rating')
+        paginator = PageNumberPagination()
+        users = paginator.paginate_queryset(query_set, request)
+        result = []
+        for user in users:
+            result.append(user.to_dict())
+        return Response({
+            'total': query_set.count(),
+            'prev': paginator.get_previous_link(),
+            'next': paginator.get_next_link(),
+            'results': result
+        }, status.HTTP_200_OK)
+
+    @auth
+    @action(detail=False, methods=['GET'])
+    def requester(self, request):
+        query_set = User.objects.filter(role=UserRole.REQUESTER, rate_c__gt=0).order_by('-rating')
+        paginator = PageNumberPagination()
+        users = paginator.paginate_queryset(query_set, request)
+        result = []
+        for user in users:
+            result.append(user.to_dict())
+        return Response({
+            'total': query_set.count(),
+            'prev': paginator.get_previous_link(),
+            'next': paginator.get_next_link(),
+            'results': result
+        }, status.HTTP_200_OK)

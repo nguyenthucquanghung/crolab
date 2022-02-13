@@ -3,6 +3,12 @@ from .models import *
 
 
 class UserSerializer(serializers.ModelSerializer):
+
+    def validate(self, data):
+        if data['role'] == UserRole.ADMIN:
+            raise serializers.ValidationError({'role': 'Can not be 0'})
+        return data
+
     class Meta:
         model = User
         fields = ['email', 'password', 'full_name', 'gender', 'year_of_birth', 'role']

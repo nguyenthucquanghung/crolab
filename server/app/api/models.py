@@ -47,6 +47,7 @@ class User(AbstractUser):
             'created_at': self.created_at,
             'updated_at': self.updated_at,
             'rating': self.rating,
+            'rate_c': self.rate_c,
             'mean_truth_accuracy': self.mean_truth_accuracy,
             'mean_shared_accuracy': self.mean_shared_accuracy,
             'label_c': self.label_c,
@@ -126,6 +127,11 @@ class Job(models.Model):
         requester = User.objects.filter(pk=self.requester).first()
         if requester is not None:
             requester = requester.to_dict()
+            requester = requester.simple_info()
+        label_type_data = []
+        label_types = ClassificationLabelType.objects.filter(job=self.id)
+        for label_type in label_types:
+            label_type_data.append(label_type.to_dict())
         return {
             'id': self.id,
             'category': self.category,
@@ -142,6 +148,7 @@ class Job(models.Model):
             'accepted_threshold': self.accept_threshold,
             'bonus_threshold': self.bonus_threshold,
             'truth_qty_ready': self.truth_qty_ready,
+            'classification_label_type': label_type_data,
             'deadline': str(self.deadline) + ' days',
             'created_at': self.created_at,
             'updated_at': self.updated_at
@@ -236,6 +243,14 @@ class Task(models.Model):
         result['shared_accuracy'] = self.shared_accuracy
         result['truth_accuracy'] = self.truth_accuracy
         return result
+
+    def to_dict_for_fire_base(self):
+        task_data = self.to_dict()
+        task_data['created_at'] = str(task_data['created_at'])
+        task_data['accepted_at'] = str(task_data['accepted_at'])
+        task_data['annotator']['created_at'] = str(task_data['annotator']['created_at'])
+        task_data['annotator']['updated_at'] = str(task_data['annotator']['updated_at'])
+        return task_data
 
 
 class Unit(models.Model):
