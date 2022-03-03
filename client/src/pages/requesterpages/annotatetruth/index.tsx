@@ -154,7 +154,7 @@ export default class AnnotateTruth extends React.Component<IAnnotateTruthProps, 
 									</Typography>
 									<ReactAudioPlayer
 										style={{width: "100%"}}
-										src={`https://crolab.blob.core.windows.net/media/${truthUnit.data}`}
+										src={`https://crolab.blob.core.windows.net/mediacrolab/${truthUnit.data}`}
 										controls
 									/>
 									<TextField

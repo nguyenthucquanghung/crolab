@@ -4,6 +4,7 @@ import {GeneralActions} from './types';
 
 const initialState: IGeneralState = {
 	showTopLoading: false,
+	currentRoute: "/",
 }
 
 export function generalReducer(
@@ -15,6 +16,10 @@ export function generalReducer(
 			return {...state, showTopLoading: true};
 		case Constants.HIDE_TOP_LOADING:
 			return {...state, showTopLoading: false};
+		case Constants.REDIRECT_TO_NEW_ROUTE:
+			return {
+				...state, currentRoute: action.payload.pathname
+			}
 		default:
 			return state;
 	}

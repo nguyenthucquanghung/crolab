@@ -1,3 +1,12 @@
-import {createBrowserHistory} from 'history';
+import createHistory from 'history/createBrowserHistory';
+import store from './redux';
+import { redirectToNewRoute } from './redux/general/actions';
 
-export default createBrowserHistory();
+const history = createHistory();
+
+history.listen((location) => {
+
+    store.dispatch(redirectToNewRoute(location));
+})
+
+export default history;

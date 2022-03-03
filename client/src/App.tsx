@@ -31,6 +31,7 @@ import AnnotateTruth from "./pages/requesterpages/annotatetruth";
 import JobDetail from "./pages/requesterpages/jobdetail";
 import AnnotatorDashboard from "./pages/annotatorpages/dashboard";
 import WorkPlace from "./pages/annotatorpages/workplace";
+import RankingBoard from "./pages/rankingboard";
 
 function mapDispatcherToProps(dispatch: Dispatch<SnackBarActions>): IAppPropsFromDispatch {
 	return {
@@ -48,13 +49,15 @@ function mapStateToProps({general, snackBar}: IRootState): IAppPropsFromState {
 	const {showTopLoading} = general;
 	return {
 		showTopLoading,
-		snackBarState: snackBar
+		snackBarState: snackBar,
+		currentRoute: general.currentRoute,
 	};
 }
 
 interface IAppPropsFromState {
 	showTopLoading?: boolean;
-	snackBarState?: ISnackBarState
+	snackBarState?: ISnackBarState;
+	currentRoute?: string;
 }
 
 type IAppProps = IAppPropsFromState & IAppPropsFromDispatch;
@@ -108,7 +111,7 @@ class App extends React.Component<IAppProps> {
 						// backgroundImage: `url("/bg.jpg")`,
 						background: "#F7F9FB"
 					}}>
-					<Header inLoginScreen={window.location.pathname === "/login"}/>
+					<Header currentPath={this.props.currentRoute!} inLoginScreen={this.props.currentRoute === "/login"}/>
 					<Router history={history}>
 						<Route exact path='/' component={Main}/>
 						<Route exact path='/register' component={Register}/>
@@ -119,6 +122,7 @@ class App extends React.Component<IAppProps> {
 						<Route exact path='/requester/createjob' component={CreateJob}/>
 						<Route exact path='/requester/job/:jobid/annotatetruth/' component={AnnotateTruth}/>
 						<Route exact path='/requester/job/:jobid/' component={JobDetail}/>
+						<Route exact path='/ranking/requester/' component={RankingBoard}/>
 
 						{/*Annotator*/}
 						<Route exact path='/annotator/dashboard' component={AnnotatorDashboard}/>

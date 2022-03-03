@@ -110,7 +110,7 @@ export default class WorkPlace extends React.Component<IWorkPlaceProps, IWorkPla
 									<TableCell sx={{p: "10px 20px"}}>
 										<ReactAudioPlayer
 											style={{width: "500px"}}
-											src={`https://crolab.blob.core.windows.net/media/${unit.data}`}
+											src={`https://crolab.blob.core.windows.net/mediacrolab/${unit.data}`}
 											controls
 										/>
 									</TableCell>
@@ -152,7 +152,7 @@ export default class WorkPlace extends React.Component<IWorkPlaceProps, IWorkPla
 						Quay lại
 					</Button>
 					<Button
-						disabled={task.labeled_unit !== task.unit_qty}
+						disabled={task.labeled_unit < task.unit_qty}
 						variant={`contained`}
 						sx={{mt: 2, mr: 2, color: "white"}}
 						color={`success`}

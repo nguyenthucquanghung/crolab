@@ -186,7 +186,7 @@ class JobViewSet(viewsets.ModelViewSet):
             if serializer.is_valid():
                 user = User.objects.filter(email=request.user).first()
                 job = serializer.save(
-                    requester=user.id, unit_qty=len(file_names))
+                    requester=user.id, unit_qty=(len(file_names)-request.data['truth_qty']-request.data['shared_qty']))
                 units = []
                 for filename in file_names:
                     units.append(Unit(job=job.id, data=filename))
@@ -389,6 +389,9 @@ class JobViewSet(viewsets.ModelViewSet):
                 job_data = job.to_dict()
                 job_data['created_at'] = str(job_data['created_at'])
                 job_data['updated_at'] = str(job_data['updated_at'])
+                job_data['requester']['created_at'] = str(job_data['requester']['created_at'])
+                job_data['requester']['updated_at'] = str(job_data['requester']['updated_at'])
+                print(job_data)
                 realtime_db.child('data').child('job').update({job.id: job_data})
             return Response(job.to_dict(), status.HTTP_201_CREATED)
 
@@ -486,9 +489,10 @@ class TaskViewSet(viewsets.ModelViewSet):
         job = Job.objects.filter(pk=task.job).first()
         remain_qty = job.unit_qty - job.accepted_qty
         # qty check
-        if remain_qty < task.unit_qty:
+        actual_qty = task.unit_qty - job.truth_qty - job.shared_qty
+        if remain_qty < actual_qty:
             return Response({
-                'errors': 'Job only has ' + str(remain_qty) + ' left'
+                'errors': 'Job only has ' + str(remain_qty + job.truth_qty + job.shared_qty) + ' left'
             }, status.HTTP_400_BAD_REQUEST)
         if task.unit_qty < job.min_qty:
             return Response({
@@ -774,7 +778,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         tasks = paginator.paginate_queryset(query_set, request)
         result = []
         for task in tasks:
-            result.append(task.to_dict())
+            result.append(task.to_dict_for_annotator())
         return Response({
             'total': query_set.count(),
             'prev': paginator.get_previous_link(),

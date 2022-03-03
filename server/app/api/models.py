@@ -127,7 +127,7 @@ class Job(models.Model):
         requester = User.objects.filter(pk=self.requester).first()
         if requester is not None:
             requester = requester.to_dict()
-            requester = requester.simple_info()
+            # requester = requester.simple_info()
         label_type_data = []
         label_types = ClassificationLabelType.objects.filter(job=self.id)
         for label_type in label_types:
@@ -167,6 +167,7 @@ class Comment(models.Model):
     def to_dict(self):
         user = User.objects.filter(pk=self.user).first()
         if user is not None:
+            print(user)
             user = user.simple_info()
         return {
             'id': self.id,
@@ -250,6 +251,21 @@ class Task(models.Model):
         task_data['accepted_at'] = str(task_data['accepted_at'])
         task_data['annotator']['created_at'] = str(task_data['annotator']['created_at'])
         task_data['annotator']['updated_at'] = str(task_data['annotator']['updated_at'])
+        task_data['job']['created_at'] = str(task_data['job']['created_at'])
+        task_data['job']['updated_at'] = str(task_data['job']['updated_at'])
+        task_data['job']['requester']['created_at'] = str(task_data['job']['requester']['created_at'])
+        task_data['job']['requester']['updated_at'] = str(task_data['job']['requester']['updated_at'])
+        print(task_data)
+        return task_data
+
+    def to_dict_for_annotator(self):
+        task_data = self.to_dict()
+        rating = Rating.objects.filter(task=self.id, rater=self.annotator).first()
+        if rating is not None:
+            task_data['rated'] = True
+            task_data['rating'] = rating.rating
+        else:
+            task_data['rated'] = False
         return task_data
 
 

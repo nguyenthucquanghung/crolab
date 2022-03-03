@@ -4,5 +4,6 @@ import * as actions from './actions';
 export type GeneralActions = ActionType<typeof actions>;
 
 export interface IGeneralState {
-	showTopLoading: boolean;
+	showTopLoading: boolean
+	currentRoute: string;
 }

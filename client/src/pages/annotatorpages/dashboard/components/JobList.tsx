@@ -239,12 +239,14 @@ export default class JobList extends React.Component<IJobListProps, IJobListStat
 		const unitQtyOptions: number[] = [];
 		const {modalJob, qtySelectError} = this.state;
 		if (!!modalJob) {
-			const slot = modalJob.min_qty - modalJob.truth_qty - modalJob.shared_qty;
+			// const slot = modalJob.min_qty - modalJob.truth_qty - modalJob.shared_qty;
 			const remainJobQty = modalJob.unit_qty - modalJob.accepted_qty;
-			for (let i = 0; modalJob.min_qty + i * slot < remainJobQty - modalJob.min_qty; ++i) {
-				unitQtyOptions.push(modalJob.min_qty + i * slot);
-				if (modalJob.min_qty + (i + 1) * slot >= remainJobQty - modalJob.min_qty) {
-					unitQtyOptions.push(modalJob.unit_qty - modalJob.accepted_qty);
+
+			for (let i = 0; modalJob.min_qty + i * modalJob.min_qty <= remainJobQty; ++i) {
+				if (modalJob.min_qty + (i + 1) * modalJob.min_qty > remainJobQty) {
+					unitQtyOptions.push(remainJobQty);
+				} else {
+					unitQtyOptions.push(modalJob.min_qty + i * modalJob.min_qty);
 				}
 			}
 		}

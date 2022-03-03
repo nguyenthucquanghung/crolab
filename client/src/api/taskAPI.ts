@@ -45,6 +45,15 @@ class TaskAPI {
 		const url = `/task/${taskId}/set_task_passed/`;
 		return API.put(url);
 	}
+
+	rate = (taskId: number|string, rating: number, comment: string) => {
+		const url = `/rate/`;
+		return API.post(url, {
+			task: taskId,
+			rating: rating,
+			comment: comment
+		})
+	}
 }
 
 const taskAPI = new TaskAPI();

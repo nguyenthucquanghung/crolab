@@ -38,6 +38,8 @@ export type Task = {
 	shared_accuracy: number;
 	truth_accuracy: number;
 	job: Job;
+	rated?: boolean;
+	rating?: number;
 }
 
 export type TruthUnit = {
